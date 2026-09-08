@@ -682,4 +682,30 @@ VALUES
     ('e0000000-0000-0000-0000-000000000005', 'WEAK_TOPIC_CONQUEROR', 'Phoenix Rising', 'Turned a weak topic into mastery through revision', 'ShieldCheck', 'weak_topic_resolved', 1)
 ON CONFLICT (code) DO NOTHING;
 
+-- 10. Backfill all existing auth.users into profiles & student_profiles
+INSERT INTO public.profiles (id, email, full_name, role)
+SELECT 
+    id, 
+    email, 
+    COALESCE(raw_user_meta_data->>'full_name', split_part(email, '@', 1)),
+    COALESCE((raw_user_meta_data->>'role')::public.user_role, 'student'::public.user_role)
+FROM auth.users
+ON CONFLICT (id) DO UPDATE
+SET full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role;
+
+INSERT INTO public.student_profiles (id, class_id, section_id, roll_number, current_streak, total_points, level, onboarding_completed)
+SELECT 
+    p.id,
+    '22222222-2222-2222-2222-222222222222', -- Grade 10
+    '44444444-4444-4444-4444-444444444444', -- Section A
+    '101',
+    3,
+    350,
+    2,
+    TRUE
+FROM public.profiles p
+WHERE p.role = 'student'
+ON CONFLICT (id) DO NOTHING;
+
 COMMIT;
