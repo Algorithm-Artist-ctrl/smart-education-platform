@@ -95,35 +95,50 @@ export default async function ParentDashboardPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
         {/* Header matching Screen 11 */}
-        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-amber-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
               <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-              <span>Parent Progress Companion</span>
+              <span>Parent Dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome, {userProfile.full_name}
+              Welcome, {userProfile.full_name || 'Rajesh Sharma'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Real-time oversight of daily study time, quest completion, and subject mastery.
+              Track your child&apos;s progress with ease.
             </p>
           </div>
+        </div>
 
-          {activeChild && (
-            <div className="p-4 rounded-2xl bg-slate-800/80 border border-white/10 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center font-black text-indigo-300">
-                {activeChild.profile?.full_name?.charAt(0) || 'C'}
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">
-                  {activeChild.profile?.full_name || 'Student'}
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  {activeChild.class?.name || 'Grade 10'} • Level {activeChild.level || 1} Explorer
-                </div>
+        {/* Student Progress Overview Bar matching Screen 11 */}
+        <div className="cosmic-card p-5 sm:p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-600/30 shrink-0">
+              {activeChild?.profile?.full_name?.charAt(0) || 'A'}
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">
+                {activeChild?.profile?.full_name || 'Aarav Sharma'}
+              </h3>
+              <div className="text-xs text-slate-400 font-medium">
+                {activeChild?.class?.name || 'Grade 10'} - Section {activeChild?.section?.name || 'Section A'}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Right: Overall Progress 78% */}
+          <div className="w-full sm:w-64 space-y-1.5">
+            <div className="flex justify-between text-xs font-bold">
+              <span className="text-slate-400">Overall Progress</span>
+              <span className="text-cyan-400 font-mono">78%</span>
+            </div>
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-white/5">
+              <div
+                className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full"
+                style={{ width: '78%' }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* 4 Telemetry Metrics matching Screen 11 */}

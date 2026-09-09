@@ -67,34 +67,34 @@ export default function CareerGuidancePage() {
 
   const careerRoadmaps = [
     {
-      title: 'Full-Stack Software Engineer',
-      matchScore: 94,
+      title: 'Software Engineer',
+      matchScore: 95,
       category: 'Computer Science',
       salaryRange: '$95k - $160k',
       requiredSubjects: ['Mathematics', 'Computer Science'],
       description: 'Architect scalable web systems, APIs, and cloud infrastructure powering modern applications.',
       topSkills: ['Python Programming', 'System Architecture', 'Algorithmic Reasoning'],
-      growthRate: '+25% (High Demand)',
+      growthRate: '+25% (High Match)',
     },
     {
-      title: 'AI & Deep Learning Researcher',
-      matchScore: 89,
+      title: 'Data Scientist',
+      matchScore: 88,
+      category: 'Data & Analytics',
+      salaryRange: '$110k - $185k',
+      requiredSubjects: ['Mathematics', 'Computer Science'],
+      description: 'Extract actionable insights, statistical patterns, and predictive predictive machine learning models.',
+      topSkills: ['Statistics', 'Python Programming', 'Data Analytics'],
+      growthRate: '+30% (High Match)',
+    },
+    {
+      title: 'AI/ML Engineer',
+      matchScore: 82,
       category: 'Artificial Intelligence',
       salaryRange: '$120k - $210k',
       requiredSubjects: ['Mathematics', 'Physics', 'Computer Science'],
       description: 'Develop neural networks, multimodal foundation models, and autonomous intelligent agents.',
       topSkills: ['Calculus & Linear Algebra', 'Python Programming', 'Logical & Algorithmic Reasoning'],
-      growthRate: '+38% (Explosive Growth)',
-    },
-    {
-      title: 'Aerospace Systems Engineer',
-      matchScore: 84,
-      category: 'Mechanical Engineering',
-      salaryRange: '$90k - $155k',
-      requiredSubjects: ['Physics', 'Mathematics'],
-      description: 'Design orbital trajectories, spacecraft control systems, and aerodynamically optimized craft.',
-      topSkills: ['Physics Modeling', 'Mathematical Problem Solving', 'Critical Thinking'],
-      growthRate: '+12% (Steady Growth)',
+      growthRate: '+38% (Good Match)',
     },
   ];
 
@@ -191,20 +191,20 @@ export default function CareerGuidancePage() {
           />
 
         {/* Hero Header matching Screen 9 */}
-        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-cyan-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/40 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
           <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
-                <Globe className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Future Pathways & Career Galaxy</span>
+                <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Career Galaxy</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Connect Learning to Your Future
+                Career Galaxy
               </h1>
               <p className="text-xs sm:text-sm text-slate-300">
-                Discover high-growth career tracks tailored to your school performance, STEM interests, and problem-solving strengths.
+                Discover your path, based on your interests and strengths.
               </p>
             </div>
 
@@ -217,6 +217,33 @@ export default function CareerGuidancePage() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>{savedSuccess ? 'Preferences Saved!' : 'Save Career Preferences'}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Interests Pills matching Screen 9 */}
+        <div className="space-y-2">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Your Interests
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {['Technology', 'Problem Solving', 'Innovation'].map((item) => {
+              const isSelected = interests.includes(item) || true;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => toggleInterest(item)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                      : 'bg-slate-800/80 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {isSelected && <Check className="w-3.5 h-3.5 text-cyan-300" />}
+                  <span>{item}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -380,6 +407,35 @@ export default function CareerGuidancePage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* 3D Visual Artwork Banner matching Screen 9 */}
+          <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl h-64 sm:h-80 flex flex-col justify-end p-6 sm:p-8 group mt-6">
+            <img
+              src="/images/hero_student.jpg"
+              alt="Future Career Galaxy"
+              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent" />
+            
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div className="max-w-md">
+                <p className="text-base sm:text-xl font-bold text-white italic drop-shadow-md">
+                  &ldquo;The best way to predict the future is to create it.&rdquo;
+                </p>
+                <p className="text-xs text-cyan-300 font-semibold mt-1">
+                  Connect your classroom milestones directly to world-changing careers.
+                </p>
+              </div>
+
+              <Link
+                href="/student/map"
+                className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-xs shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 shrink-0 active:scale-95 transition-all"
+              >
+                <span>Explore Careers</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
         </main>

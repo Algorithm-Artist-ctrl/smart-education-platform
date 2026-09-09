@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { StudyPlan, Subject, Topic, Profile, StudentProfile } from '@/types/database.types';
 import { enqueueAction } from '@/lib/offline/db';
@@ -235,195 +236,197 @@ export default function StudyPlanPage() {
           </div>
         </div>
 
-        {/* 7-Day Quick Strip Navigator matching Screen 7 */}
-        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto touch-scroll-x pb-2 pt-1">
-          {getDaysStrip().map((day) => {
-            const isSelected = day.dateStr === selectedDate;
-            return (
-              <button
-                key={day.dateStr}
-                onClick={() => setSelectedDate(day.dateStr)}
-                className={`min-w-[72px] sm:min-w-[88px] py-3 px-2 rounded-2xl border transition-all flex flex-col items-center justify-center gap-1 ${
-                  isSelected
-                    ? 'bg-gradient-to-b from-blue-600 to-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-400/50'
-                    : 'bg-slate-900/70 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                  {day.dayName}
+        {/* Main 2-Column Grid matching Screen 7 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column: Month Calendar & Today's Timeline Tasks (5 Cols) */}
+          <div className="lg:col-span-5 space-y-5">
+            {/* Month Calendar Card matching Screen 7 */}
+            <div className="cosmic-card p-5 sm:p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <h3 className="text-sm font-black text-white tracking-wide">
+                  September 2026
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Days of Week */}
+              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                <span>Su</span>
+                <span>Mo</span>
+                <span>Tu</span>
+                <span>We</span>
+                <span>Th</span>
+                <span>Fr</span>
+                <span>Sa</span>
+              </div>
+
+              {/* Month Dates Grid (Sept 2026 starts on Tuesday, 30 days) */}
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
+                <span className="py-1 text-slate-600">30</span>
+                <span className="py-1 text-slate-600">31</span>
+                {[...Array(30)].map((_, i) => {
+                  const day = i + 1;
+                  const isSelected = day === 9; // 9 Sep in reference
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {}}
+                      className={`py-1.5 rounded-xl transition-all flex items-center justify-center ${
+                        isSelected
+                          ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/30'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Today's Tasks Timeline List matching Screen 7 */}
+            <div className="cosmic-card p-5 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400">
+                    Today
+                  </h4>
+                  <div className="text-[11px] text-slate-400 font-medium">Mon, 9 Sep</div>
+                </div>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20">
+                  4 Tasks
                 </span>
-                <span className="text-lg sm:text-xl font-black">
-                  {day.dayNum}
-                </span>
-                {day.isToday && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+              </div>
 
-        {/* Progress Summary & Nova Motivation Box */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Progress Overview (5 Cols) */}
-          <div className="md:col-span-5 cosmic-card p-5 rounded-3xl border border-white/10 bg-slate-900/60 backdrop-blur-md shadow-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                <span className="font-bold uppercase tracking-wider text-indigo-400">Daily Mission Goal</span>
-                <span className="font-bold text-white">{completedCount}/{plans.length} Done</span>
-              </div>
-              <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden mb-4">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-white/5 text-xs">
-              <div className="flex items-center gap-1.5 text-slate-300">
-                <Clock className="w-4 h-4 text-indigo-400" />
-                <span>Total Study Time: <strong className="text-white">{totalMinutes} mins</strong></span>
-              </div>
-              <div className="flex items-center gap-1 text-emerald-400 font-bold">
-                <Zap className="w-3.5 h-3.5" />
-                <span>+{completedCount * 30} XP</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Nova Motivational Quote Card (7 Cols) */}
-          <div className="md:col-span-7 p-5 rounded-3xl bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/30 shadow-xl flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shrink-0">
-              <Sparkles className="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5 mb-1">
-                <span>Nova AI Daily Boost</span>
-                <Flame className="w-3.5 h-3.5 text-orange-400" />
-              </div>
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-medium">
-                &ldquo;Discipline today creates freedom tomorrow. Complete all scheduled missions to safeguard your streak!&rdquo;
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Today's Missions List matching Screen 7 */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-black text-white flex items-center gap-2">
-              <span>Today&apos;s Missions</span>
-              <span className="text-xs font-normal text-slate-400">({plans.length})</span>
-            </h3>
-          </div>
-
-          {loading ? (
-            <div className="py-16 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Retrieving Missions...</span>
-            </div>
-          ) : plans.length === 0 ? (
-            <div className="cosmic-card rounded-3xl border border-white/10 bg-slate-900/60 p-12 text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
-                <BookOpen className="w-8 h-8" />
-              </div>
-              <div className="max-w-sm mx-auto">
-                <h4 className="text-base font-bold text-white">No Missions Scheduled</h4>
-                <p className="text-xs text-slate-400 mt-1">
-                  You haven&apos;t scheduled any study missions for this date. Create your first task to start earning points!
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 inline-flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Study Mission</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {plans.map((plan) => {
-                const isDone = plan.status === 'completed';
-
-                return (
+              <div className="space-y-2">
+                {[
+                  { title: 'Math Practice', time: '10:00 AM', color: 'border-l-blue-500' },
+                  { title: 'Physics Revision', time: '12:00 PM', color: 'border-l-cyan-500' },
+                  { title: 'Complete Assignment', time: '04:00 PM', color: 'border-l-indigo-500' },
+                  { title: 'Quick Quiz', time: '07:00 PM', color: 'border-l-amber-500' },
+                ].map((t) => (
                   <div
-                    key={plan.id}
-                    className={`cosmic-card p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                      isDone
-                        ? 'bg-slate-900/40 border-white/5 opacity-70'
-                        : 'bg-slate-900/80 border-white/10 hover:border-indigo-500/40 shadow-xl'
-                    }`}
+                    key={t.title}
+                    className={`p-3 rounded-2xl bg-slate-800/50 border border-white/5 border-l-4 ${t.color} flex items-center justify-between text-xs`}
                   >
-                    <div className="flex items-start sm:items-center gap-4 min-w-0">
-                      {/* Checkbox toggle */}
-                      <button
-                        type="button"
-                        onClick={() => toggleTaskComplete(plan)}
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center transition-all shrink-0 mt-0.5 sm:mt-0 ${
-                          isDone
-                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                            : 'border-2 border-slate-600 hover:border-indigo-400 bg-slate-800'
-                        }`}
-                      >
-                        {isDone && <Check className="w-4 h-4" />}
-                      </button>
+                    <span className="font-bold text-white">{t.title}</span>
+                    <span className="text-[11px] font-mono text-slate-400">{t.time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          {plan.subject && (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/30 uppercase">
-                              {plan.subject.name}
-                            </span>
-                          )}
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                              plan.priority === 'urgent'
-                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                                : plan.priority === 'high'
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-slate-800 text-slate-400 border border-white/5'
-                            }`}
-                          >
-                            {plan.priority}
-                          </span>
-                        </div>
+          {/* Right Column: Today's Schedule & 3D Nova Motivation matching Screen 7 (7 Cols) */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Today's Schedule Card */}
+            <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white">
+                  Today&apos;s Schedule
+                </h3>
+                <span className="text-xs text-slate-400 font-medium">Daily Agenda</span>
+              </div>
 
-                        <h4
-                          className={`text-sm font-bold text-white transition ${
-                            isDone ? 'line-through text-slate-400' : ''
-                          }`}
-                        >
-                          {plan.title}
+              {/* 4 Agenda Cards with Start buttons */}
+              <div className="space-y-3">
+                {[
+                  {
+                    title: 'Math Practice',
+                    sub: 'Quadratic Equations',
+                    icon: '📐',
+                    href: '/student/subjects',
+                  },
+                  {
+                    title: 'Physics Revision',
+                    sub: 'Laws of Motion',
+                    icon: '⚛',
+                    href: '/student/revision',
+                  },
+                  {
+                    title: 'Career Guide',
+                    sub: 'Explore opportunities',
+                    icon: '🧭',
+                    href: '/student/career',
+                  },
+                  {
+                    title: 'Daily Reflection',
+                    sub: 'How did you learn today?',
+                    icon: '💡',
+                    href: '/student',
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 hover:border-indigo-500/30 transition flex items-center justify-between gap-4 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-lg shrink-0">
+                        {item.icon}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition">
+                          {item.title}
                         </h4>
-                        {plan.description && (
-                          <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                            {plan.description}
-                          </p>
-                        )}
+                        <div className="text-xs text-slate-400">{item.sub}</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-white/5">
-                      <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        {plan.duration_minutes || 30}m
-                      </span>
-
-                      <button
-                        onClick={() => deleteTask(plan.id)}
-                        className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition"
-                        title="Delete Mission"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <Link
+                      href={item.href}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 active:scale-95 transition-all"
+                    >
+                      Start
+                    </Link>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          )}
+
+            {/* 3D Nova Robot Motivation Quote Card matching Screen 7 */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/30 shadow-xl flex items-center gap-5">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950 shadow-lg shadow-cyan-500/20">
+                <img
+                  src="/images/nova_robot.jpg"
+                  alt="Nova Robot Mascot"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400">
+                  Nova Daily Boost
+                </span>
+                <p className="text-xs sm:text-sm font-bold text-slate-200 leading-relaxed italic">
+                  &ldquo;Discipline today creates freedom tomorrow.&rdquo;
+                </p>
+              </div>
+            </div>
+
+            {/* Add to Plan Button */}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add to Plan</span>
+            </button>
+          </div>
         </div>
       </main>
     </div>

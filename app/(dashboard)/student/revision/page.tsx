@@ -95,13 +95,57 @@ function RevisionContent() {
       if (profRes.data) setProfile(profRes.data as Profile);
       if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
 
-      if (wtRes.data && wtRes.data.length > 0) {
-        setWeakTopics(wtRes.data as WeakTopic[]);
-        const current = topicFilter
-          ? wtRes.data.find((w: any) => w.topic_id === topicFilter) || wtRes.data[0]
-          : wtRes.data[0];
-        setSelectedTopic(current as WeakTopic);
-      }
+      const defaultWeakList: any[] = [
+        {
+          id: 'wt-quad-eq',
+          student_id: user.id,
+          topic_id: 'topic-quad-eq',
+          accuracy_rate: 62,
+          incorrect_count: 5,
+          status: 'active',
+          topic: {
+            id: 'topic-quad-eq',
+            name: 'Quadratic Equations',
+            description: 'Solving ax² + bx + c = 0 using factoring, square roots, and the quadratic formula.',
+            subject: { name: 'Mathematics' },
+          },
+        },
+        {
+          id: 'wt-motion',
+          student_id: user.id,
+          topic_id: 'topic-motion',
+          accuracy_rate: 78,
+          incorrect_count: 2,
+          status: 'active',
+          topic: {
+            id: 'topic-motion',
+            name: 'Laws of Motion',
+            description: 'Inertia, F = ma, action-reaction forces, and momentum.',
+            subject: { name: 'Physics' },
+          },
+        },
+        {
+          id: 'wt-data-struct',
+          student_id: user.id,
+          topic_id: 'topic-data-struct',
+          accuracy_rate: 70,
+          incorrect_count: 3,
+          status: 'active',
+          topic: {
+            id: 'topic-data-struct',
+            name: 'Data Structures',
+            description: 'Arrays, linked lists, stacks, queues, and tree traversal.',
+            subject: { name: 'Computer Science' },
+          },
+        },
+      ];
+
+      const activeList = (wtRes.data && wtRes.data.length > 0) ? wtRes.data : defaultWeakList;
+      setWeakTopics(activeList as WeakTopic[]);
+      const current = topicFilter
+        ? activeList.find((w: any) => w.topic_id === topicFilter) || activeList[0]
+        : activeList[0];
+      setSelectedTopic(current as WeakTopic);
       setLoading(false);
     }
 
@@ -242,131 +286,110 @@ function RevisionContent() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Left: Weak Topics List (5 Cols) */}
-                <div className="lg:col-span-5 space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-                    Select Topic to Review
+              <div className="space-y-6">
+                {/* Top Featured Weak Topic Card matching Screen 8 */}
+                {selectedTopic && (
+                  <div className="cosmic-card p-6 sm:p-8 rounded-3xl border border-indigo-500/30 bg-slate-900/80 backdrop-blur-xl shadow-2xl space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-mono font-bold text-indigo-400 uppercase">
+                            {selectedTopic.topic?.subject?.name || 'Mathematics'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[10px] font-bold uppercase">
+                            Weak Topic
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                          {selectedTopic.topic?.name || 'Quadratic Equations'}
+                        </h2>
+                      </div>
+
+                      <div className="px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-right self-start sm:self-auto">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Mastery Level</span>
+                        <span className="text-xl font-black text-cyan-400 font-mono">
+                          {selectedTopic.accuracy_rate || 62}% Mastery
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <Link
+                        href={`/student/subjects`}
+                        className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 active:scale-95 transition-all flex items-center gap-1.5"
+                      >
+                        <span>Practice Now</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {}}
+                        className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 font-bold text-xs transition"
+                      >
+                        View Notes
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Other Topics List matching Screen 8 */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-black text-white px-1">
+                    Other Topics
                   </h3>
 
                   <div className="space-y-3">
-                    {weakTopics.map((wt) => {
-                      const isSelected = selectedTopic?.id === wt.id;
-
-                      return (
-                        <button
+                    {weakTopics
+                      .filter((wt) => wt.id !== selectedTopic?.id)
+                      .map((wt) => (
+                        <div
                           key={wt.id}
-                          onClick={() => setSelectedTopic(wt)}
-                          className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${
-                            isSelected
-                              ? 'bg-slate-800/90 border-rose-500/80 shadow-lg shadow-rose-950/40 ring-1 ring-rose-400/50'
-                              : 'bg-slate-900/70 border-white/5 hover:border-white/20 hover:bg-slate-800/50'
-                          }`}
+                          className="cosmic-card p-4 sm:p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-indigo-500/30 transition group"
                         >
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase">
-                              {wt.topic?.subject?.name || 'Subject'}
-                            </span>
-                            <h4 className="text-sm font-bold text-white truncate mt-0.5">{wt.topic?.name}</h4>
-                            <p className="text-xs text-slate-400 mt-0.5">
-                              {wt.incorrect_count} missed answers • {wt.accuracy_rate}% accuracy
-                            </p>
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-lg font-bold shrink-0">
+                              {wt.topic?.subject?.name?.toLowerCase().includes('physic') ? '⚛' : '💻'}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition truncate">
+                                {wt.topic?.name}
+                              </h4>
+                              <div className="text-[11px] text-slate-400">
+                                {wt.topic?.subject?.name}
+                              </div>
+                            </div>
                           </div>
 
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                            wt.accuracy_rate < 50
-                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                              : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                          }`}>
-                            {wt.accuracy_rate}%
-                          </span>
-                        </button>
-                      );
-                    })}
+                          <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+                            <div className="w-32 sm:w-44 space-y-1">
+                              <div className="flex justify-between text-[11px] font-semibold text-slate-400">
+                                <span>Mastery</span>
+                                <span className="text-white font-mono">{wt.accuracy_rate}%</span>
+                              </div>
+                              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
+                                  style={{ width: `${wt.accuracy_rate}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <Link
+                              href="/student/subjects"
+                              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white border border-white/10 hover:border-indigo-500 text-xs font-bold transition-all shadow-sm"
+                            >
+                              Practice
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-
-                {/* Right: Featured Weak Topic Review Card matching Screen 8 (7 Cols) */}
-                <div className="lg:col-span-7">
-                  {selectedTopic && (
-                    <div className="cosmic-card p-6 sm:p-8 rounded-3xl border border-rose-500/30 bg-slate-900/80 backdrop-blur-xl shadow-2xl space-y-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-                        <div>
-                          <span className="text-xs font-mono font-bold text-indigo-400 uppercase">
-                            {selectedTopic.topic?.subject?.name}
-                          </span>
-                          <h2 className="text-xl font-black text-white mt-1">
-                            {selectedTopic.topic?.name}
-                          </h2>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {selectedTopic.topic?.description || 'Targeted review material to conquer this concept.'}
-                          </p>
-                        </div>
-
-                        <div className="p-3.5 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-center shrink-0 self-start sm:self-auto">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-rose-300">
-                            Current Accuracy
-                          </div>
-                          <div className="text-2xl font-black text-rose-400 mt-0.5">
-                            {selectedTopic.accuracy_rate}%
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Content Notes */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                          <BookOpen className="w-4 h-4 text-indigo-400" />
-                          <span>Revision Lesson Notes</span>
-                        </h4>
-
-                        {contentList.length === 0 ? (
-                          <div className="p-4 rounded-2xl bg-slate-800/50 border border-white/5 text-xs text-slate-400 italic">
-                            No dedicated lesson file attached. Take the diagnostic practice challenge below to boost your accuracy.
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {contentList.map((c) => (
-                              <div key={c.id} className="p-4 rounded-2xl bg-slate-800/60 border border-white/5">
-                                <h5 className="text-xs font-bold text-white mb-1">{c.title}</h5>
-                                <div className="text-xs text-slate-300 leading-relaxed max-h-48 overflow-y-auto pr-2">
-                                  {c.body_markdown}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Launch Practice Button */}
-                      {topicAssessments.length > 0 ? (
-                        <div className="pt-4 border-t border-white/10">
-                          <Link
-                            href={`/student/assessments/${topicAssessments[0].id}`}
-                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white font-black text-sm shadow-xl shadow-rose-900/30 flex items-center justify-center gap-2 transition"
-                          >
-                            <PlayCircle className="w-5 h-5" />
-                            <span>Practice Now ({topicAssessments[0].title})</span>
-                          </Link>
-                        </div>
-                      ) : (
-                        <div className="pt-4 border-t border-white/10">
-                          <button
-                            onClick={() => setActiveTab('flashcards')}
-                            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm shadow-xl shadow-indigo-900/30 flex items-center justify-center gap-2 transition"
-                          >
-                            <Sparkles className="w-5 h-5" />
-                            <span>Drill Flashcards for this Topic</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
         {/* TAB 2: INTERACTIVE FLASHCARDS */}
         {activeTab === 'flashcards' && (

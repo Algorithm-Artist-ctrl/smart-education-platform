@@ -318,68 +318,65 @@ export default async function StudentDashboardPage() {
                   )}
                 </div>
 
-                {primaryQuest ? (
-                  <>
-                    <h4 className="text-base font-black text-white line-clamp-1 mb-1">
-                      {primaryQuest.title}
-                    </h4>
-                    <div className="text-xs text-indigo-300/80 mb-3">
-                      {primaryQuest.subject_name || 'Mathematics'}
+                {/* Quest Content matching Screen 2 */}
+                <div className="p-3 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                      <Target className="w-5 h-5" />
                     </div>
-
-                    <div className="space-y-1 mb-4">
-                      <div className="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Progress</span>
-                        <span className="font-mono text-cyan-400">{primaryQuest.progress_percent || 0}%</span>
-                      </div>
-                      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
-                        <div
-                          className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
-                          style={{ width: `${primaryQuest.progress_percent || 0}%` }}
-                        />
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-black text-white truncate">
+                        {primaryQuest?.title || 'Master Quadratic Equations'}
+                      </h4>
+                      <div className="text-[11px] text-indigo-300/80 font-medium">
+                        {primaryQuest?.subject_name || 'Mathematics'} • {primaryQuest?.duration_minutes || 20} min
                       </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="py-4 text-center">
-                    <p className="text-xs text-slate-300 font-medium">
-                      No quest assigned today yet.
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Explore your subject worlds to claim daily challenges.
-                    </p>
                   </div>
-                )}
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold text-slate-300">
+                      <span className="text-[11px] text-slate-400">Progress</span>
+                      <span className="font-mono text-cyan-400 font-bold">{primaryQuest?.progress_percent || 80}%</span>
+                    </div>
+                    <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full"
+                        style={{ width: `${primaryQuest?.progress_percent || 80}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-purple-400 fill-purple-400" />
-                    +{primaryQuest?.xp_reward || 100} XP
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-indigo-300 bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-indigo-400 fill-indigo-400" />
+                    +{primaryQuest?.xp_reward || 150} XP
                   </span>
-                  <span className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <span className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1">
                     <Coins className="w-3 h-3 text-amber-400 fill-amber-400" />
-                    +{primaryQuest?.coin_reward || primaryQuest?.coins_reward || 15}
+                    +{primaryQuest?.coin_reward || primaryQuest?.coins_reward || 20} Coins
                   </span>
                 </div>
 
                 <Link
-                  href={primaryQuest ? '/student/revision' : '/student/map'}
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1 active:scale-95 transition-all"
+                  href={primaryQuest ? `/student/assessments/${primaryQuest.id}` : '/student/revision'}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
                 >
-                  <span>{primaryQuest ? 'Continue' : 'Explore'}</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <span>Continue</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             </div>
 
-            {/* Nova AI Companion Card (4 cols on md/lg) */}
-            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-cyan-950/30 border border-cyan-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
+            {/* Nova AI Companion Card (4 cols on md/lg, matching Screen 2) */}
+            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-indigo-950/30 border border-indigo-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="relative w-8 h-8 rounded-xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-9 h-9 rounded-xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950">
                       <Image
                         src="/images/nova_robot.jpg"
                         alt="Nova AI Mentor"
@@ -388,36 +385,28 @@ export default async function StudentDashboardPage() {
                       />
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase font-black tracking-wider text-cyan-400 flex items-center gap-1">
+                      <h4 className="text-sm font-black text-white leading-none">
                         Nova AI
-                        <Sparkles className="w-2.5 h-2.5" />
-                      </span>
-                      <h4 className="text-xs font-bold text-white leading-none">
-                        Study Companion
                       </h4>
+                      <span className="text-[10px] text-cyan-400 font-semibold">
+                        Adaptive Companion
+                      </span>
                     </div>
                   </div>
+                  <span className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer">×</span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-slate-200 leading-relaxed mb-3">
-                  {primaryWeakTopic ? (
-                    <>
-                      Hi <span className="font-bold text-white">{studentName}</span>! Want to practice 5 questions on your weak topic: <span className="text-cyan-300 font-bold">"{primaryWeakTopic}"</span>?
-                    </>
-                  ) : (
-                    <>
-                      Hi <span className="font-bold text-white">{studentName}</span>! You are on a <span className="text-orange-400 font-bold">{streak}-day streak</span>. Ready to master new concepts today?
-                    </>
-                  )}
+                <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-slate-200 leading-relaxed mb-3">
+                  Hi <span className="font-bold text-white">{studentName}</span>! 👋 Want to practice 5 questions on your weak topic?
                 </div>
               </div>
 
               <div className="pt-2">
                 <Link
                   href="/student/revision"
-                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
                   <span>Start Practice</span>
                 </Link>
               </div>

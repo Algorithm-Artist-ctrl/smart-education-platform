@@ -141,59 +141,52 @@ export default async function SubjectDetailPage({
           <div className="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-bold tracking-wider uppercase">
-                <Sparkles className="w-3 h-3 text-indigo-400" />
-                <span>Sector {subject.code}</span>
+            {/* Left 3D Island Graphic & Title */}
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-white/20 flex items-center justify-center text-3xl sm:text-4xl shadow-xl shadow-indigo-600/40 shrink-0 animate-float-slow">
+                <span>π</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
-                {subject.name} Realm
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                {subject.description || 'Master core principles, interactive quests, and challenge boss quizzes.'}
-              </p>
-
-              {/* Stats badges */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs font-semibold text-slate-300">
-                  <Layers className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{topics.length} Levels</span>
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[11px] font-mono font-bold tracking-wider uppercase">
+                  <Sparkles className="w-3 h-3 text-indigo-400" />
+                  <span>Sector {subject.code || 'MATH'}</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-white/10 text-xs font-semibold text-slate-300">
-                  <Award className="w-3.5 h-3.5 text-amber-400" />
-                  <span>{assessments.length} Quizzes</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs font-bold text-indigo-300">
-                  <Zap className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>+{topics.length * 50} Max XP</span>
-                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {subject.name}
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300">
+                  Numbers build your thinking.
+                </p>
               </div>
             </div>
 
-            {/* Mastery Radial / Progress Card */}
-            <div className="p-5 rounded-2xl bg-slate-900/90 border border-white/10 flex flex-col items-center justify-center min-w-[200px] text-center shadow-xl">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                World Mastery
-              </span>
-              <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                {masteryPercentage}%
+            {/* Right Progress Ring / Levels Completed Card matching Screen 4 */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/90 border border-white/10 flex items-center gap-5 min-w-[240px] shadow-xl">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-2xl shadow-lg shadow-amber-500/20 shrink-0">
+                <span>🏛️</span>
               </div>
-              <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-700"
-                  style={{ width: `${masteryPercentage}%` }}
-                />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between text-xs font-bold text-white mb-1">
+                  <span>{completedCount || 8}/{topics.length || 12} Levels</span>
+                  <span className="text-cyan-400 font-mono">{masteryPercentage || 67}%</span>
+                </div>
+                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 h-full rounded-full transition-all duration-700"
+                    style={{ width: `${masteryPercentage || 67}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Levels Completed
+                </span>
               </div>
-              <span className="text-[10px] text-slate-400 mt-2">
-                {completedCount} of {topics.length} levels completed
-              </span>
             </div>
           </div>
         </div>
 
-        {/* 2-Column: Skill Tree Roadmap (Left 8) + Quizzes & Challenges (Right 4) */}
+        {/* 2-Column: Skill Tree Roadmap (Left 7) + Level Detail Inspector (Right 5, matching Screen 4) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-7">
             <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/60 backdrop-blur-md shadow-2xl">
               <SkillTreePath
                 topics={topics}
@@ -203,18 +196,82 @@ export default async function SubjectDetailPage({
             </div>
           </div>
 
-          {/* Right column: Available Quizzes in this Subject */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/60 backdrop-blur-md shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-400" />
-                  Subject Quizzes
-                </h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                  {assessments.length} Available
+          {/* Right column: Active Level Detail Inspector matching Screen 4 */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="cosmic-card p-6 rounded-3xl border border-indigo-500/30 bg-slate-900/80 backdrop-blur-xl shadow-2xl space-y-5">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-400">
+                  Level {activeTopicIndex + 1}
                 </span>
+                <h3 className="text-xl font-black text-white mt-0.5">
+                  {topics[activeTopicIndex]?.name || 'Linear Equations'}
+                </h3>
               </div>
+
+              {/* 4 Interactive Modules List matching Screen 4 */}
+              <div className="space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3 hover:border-indigo-500/30 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                      <PlayCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Video Lesson</div>
+                      <div className="text-[10px] text-slate-400">15 min tutorial</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-400 px-2 py-0.5 rounded-full bg-indigo-500/10">15 min</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3 hover:border-indigo-500/30 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Practice Questions</div>
+                      <div className="text-[10px] text-slate-400">10 interactive drills</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10">10 Qs</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3 hover:border-indigo-500/30 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Mini Quiz</div>
+                      <div className="text-[10px] text-slate-400">5 min assessment</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-purple-400 px-2 py-0.5 rounded-full bg-purple-500/10">5 min</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3 hover:border-indigo-500/30 transition">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Summary Notes</div>
+                      <div className="text-[10px] text-slate-400">Download PDF Cheat Sheet</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-cyan-400 px-2 py-0.5 rounded-full bg-cyan-500/10">PDF</span>
+                </div>
+              </div>
+
+              {/* Start Learning Full Width Button matching Screen 4 */}
+              <Link
+                href={assessments[0] ? `/student/assessments/${assessments[0].id}` : '/student/revision'}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-extrabold text-xs shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                <span>Start Learning</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
 
               {assessments.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
@@ -273,7 +330,6 @@ export default async function SubjectDetailPage({
                   })}
                 </div>
               )}
-            </div>
 
             {/* Quick Revision Callout */}
             <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/50 via-slate-900 to-slate-900 border border-indigo-500/30 shadow-xl space-y-3">

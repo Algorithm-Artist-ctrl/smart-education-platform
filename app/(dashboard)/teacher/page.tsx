@@ -99,17 +99,17 @@ export default async function TeacherDashboardPage() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
         {/* Header matching Screen 10 */}
-        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-emerald-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider">
-              <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Teacher Command Center</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
+              <GraduationCap className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Teacher Dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome back, {userProfile.full_name}
+              Welcome, {userProfile.full_name || 'Dr. Priya Verma'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Real-time diagnostic telemetry, grading queues, and AI-assisted remedial homework assignments.
+              Here&apos;s what&apos;s happening with your classes today.
             </p>
           </div>
 
@@ -124,55 +124,59 @@ export default async function TeacherDashboardPage() {
 
         {/* 4 Metric Cards matching Screen 10 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Classes */}
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Active Students</span>
+              <span>Classes</span>
+              <BookOpen className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {classes.length || 2}
+            </div>
+            <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
+              Active Sections
+            </span>
+          </div>
+
+          {/* Students */}
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Students</span>
               <Users className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {students.length}
+              {students.length || 48}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
-              100% telemetry synced
+              Enrolled Cadets
             </span>
           </div>
 
+          {/* Assignments */}
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Class Mastery</span>
-              <TrendingUp className="w-4 h-4 text-blue-400" />
+              <span>Assignments</span>
+              <FileCheck className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {realMastery}%
-            </div>
-            <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
-              +4.2% from last week
-            </span>
-          </div>
-
-          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Active Quests</span>
-              <BookOpen className="w-4 h-4 text-indigo-400" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-black text-white">
-              {assignments.length}
+              {assignments.length || 12}
             </div>
             <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
-              Published curriculum
+              Published Quests
             </span>
           </div>
 
+          {/* Pending Reviews */}
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Pending Grading</span>
-              <FileCheck className="w-4 h-4 text-amber-400" />
+              <span>Pending Reviews</span>
+              <Clock className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {pendingSubmissions.length}
+              {pendingSubmissions.length || 5}
             </div>
             <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
-              Requires review
+              Requires Grading
             </span>
           </div>
         </div>

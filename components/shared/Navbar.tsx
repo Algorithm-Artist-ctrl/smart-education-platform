@@ -128,27 +128,49 @@ export default function Navbar({ profile }: NavbarProps) {
             </nav>
           )}
 
-          {/* Right Action Tools */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Bilingual Switcher */}
+          {/* Right Action Tools matching reference screens 2-12 */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Quick Search */}
             <button
-              onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
-              aria-label="Toggle language"
-              className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition border border-white/10 flex items-center gap-1.5 min-h-[44px]"
+              type="button"
+              aria-label="Search"
+              className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition min-h-[40px] min-w-[40px] flex items-center justify-center"
             >
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{language === 'en' ? 'EN' : 'HI'}</span>
+              <Search className="w-4 h-4" />
             </button>
 
             {/* Notification Bell */}
             {profile && <NotificationBell userId={profile.id} />}
 
-            {/* User Profile / Logout */}
+            {/* Quick Settings / Flame */}
+            <Link
+              href="/student/achievements"
+              aria-label="Achievements & Badges"
+              className="p-2 text-slate-400 hover:text-amber-400 hover:bg-white/5 rounded-xl transition min-h-[40px] min-w-[40px] flex items-center justify-center"
+            >
+              <Flame className="w-4 h-4 text-orange-400" />
+            </Link>
+
+            {/* Bilingual Switcher */}
+            <button
+              onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
+              aria-label="Toggle language"
+              className="hidden sm:flex px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition border border-white/10 items-center gap-1.5 min-h-[38px]"
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{language === 'en' ? 'EN' : 'HI'}</span>
+            </button>
+
+            {/* User Profile with Green Online Indicator Dot / Logout */}
             {profile ? (
               <div className="flex items-center gap-2 pl-1 border-l border-white/10">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  {profile.full_name?.charAt(0) || 'U'}
-                </div>
+                <Link href="/student/profile" className="relative group">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-md">
+                    {profile.full_name?.charAt(0) || 'U'}
+                  </div>
+                  {/* Green Online Dot */}
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950" />
+                </Link>
                 <div className="hidden lg:flex flex-col text-left">
                   <span className="text-xs font-bold text-white line-clamp-1 max-w-[110px]">
                     {profile.full_name?.split(' ')[0]}
@@ -160,7 +182,7 @@ export default function Navbar({ profile }: NavbarProps) {
                 <button
                   onClick={handleLogout}
                   aria-label="Log out"
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition min-h-[40px] min-w-[40px] flex items-center justify-center"
                   title="Sign Out"
                 >
                   <LogOut className="w-4 h-4" />
