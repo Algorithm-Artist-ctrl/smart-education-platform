@@ -32,10 +32,33 @@ function LoginForm() {
     const cleanEmail = email.trim();
 
     try {
-      let authUser = null;
-      let clientError = null;
+      // 1. Primary: Same-origin Next.js server auth route (immune to CORS preflight & ad-blockers)
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
 
-      // 1. Attempt client-side Supabase Auth API
+      const data = await res.json();
+
+      if (data.success) {
+        try {
+          await refreshProfile();
+        } catch {
+          // Cookie is set, continue
+        }
+        const destination = redirectTo || data.redirectTo || '/student';
+        window.location.href = destination;
+        return;
+      } else {
+        setErrorMsg(data.error || 'Invalid email or password. Please check your credentials and try again.');
+        setLoading(false);
+        return;
+      }
+    } catch (serverErr: any) {
+      console.warn('Server auth endpoint error, trying direct client fallback:', serverErr);
+
+      // 2. Fallback: Direct client-side Supabase signIn
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
@@ -43,110 +66,29 @@ function LoginForm() {
         });
 
         if (error) {
-          clientError = error;
-        } else if (data.user) {
-          authUser = data.user;
-        }
-      } catch (err: any) {
-        // Intercept client-side CORS / preflight / network block ("Failed to fetch")
-        clientError = err;
-      }
-
-      // 2. If client-side failed with "Failed to fetch" or CORS preflight error,
-      // route via same-origin server auth endpoint to bypass browser CORS / extension restrictions
-      if (clientError && (clientError.message?.toLowerCase().includes('fetch') || !authUser)) {
-        if (
-          !clientError.message?.toLowerCase().includes('invalid login') &&
-          !clientError.message?.toLowerCase().includes('confirm')
-        ) {
-          try {
-            const res = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: cleanEmail, password }),
-            });
-            const serverData = await res.json();
-            if (serverData.success) {
-              await refreshProfile();
-              router.push(redirectTo || serverData.redirectTo || '/student');
-              router.refresh();
-              return;
-            } else {
-              setErrorMsg(serverData.error || 'Invalid email or password.');
-              setLoading(false);
-              return;
-            }
-          } catch (serverErr: any) {
-            console.error('Server auth attempt error:', serverErr);
+          const msg = error.message.toLowerCase();
+          if (msg.includes('invalid login credentials')) {
+            setErrorMsg('Invalid email or password. Please check your credentials and try again.');
+          } else if (msg.includes('email not confirmed')) {
+            setErrorMsg('Your email is not verified yet. Please check your inbox for the verification email.');
+          } else {
+            setErrorMsg(error.message);
           }
+          setLoading(false);
+          return;
         }
-      }
 
-      // Handle standard authentication failure from Supabase
-      if (clientError) {
-        const msg = clientError.message.toLowerCase();
-        if (msg.includes('invalid login credentials')) {
-          setErrorMsg('Invalid email or password. Please check your credentials and try again.');
-        } else if (msg.includes('email not confirmed')) {
-          setErrorMsg('Your email is not verified yet. Please check your inbox for the verification email.');
-        } else if (msg.includes('failed to fetch')) {
-          setErrorMsg('Unable to connect to the authentication server. Please check your network connection and try again.');
-        } else {
-          setErrorMsg(clientError.message);
+        if (data.user) {
+          const destination = redirectTo || '/student';
+          window.location.href = destination;
+          return;
         }
+      } catch (clientErr: any) {
+        console.error('Client auth fallback error:', clientErr);
+        setErrorMsg('Unable to connect to the authentication service. Please check your network and try again.');
         setLoading(false);
         return;
       }
-
-      if (authUser) {
-        // Synchronize auth context state
-        await refreshProfile();
-
-        // Fetch user profile to direct to the correct portal
-        let role: string = (authUser.user_metadata?.role as string) || 'student';
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', authUser.id)
-            .single();
-
-          if (profile?.role) {
-            role = profile.role;
-          }
-        } catch {
-          // Fallback to metadata
-        }
-
-        if (redirectTo) {
-          router.push(redirectTo);
-        } else if (role === 'teacher') {
-          router.push('/teacher');
-        } else if (role === 'parent') {
-          router.push('/parent');
-        } else if (role === 'admin') {
-          router.push('/admin');
-        } else if (role === 'super_admin') {
-          router.push('/super-admin');
-        } else {
-          // Check if student completed onboarding
-          const { data: sp } = await supabase
-            .from('student_profiles')
-            .select('onboarding_completed')
-            .eq('id', authUser.id)
-            .maybeSingle();
-
-          if (sp && sp.onboarding_completed) {
-            router.push('/student');
-          } else {
-            router.push('/onboarding');
-          }
-        }
-        router.refresh();
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'An unexpected error occurred during sign-in.');
-      setLoading(false);
     }
   };
 

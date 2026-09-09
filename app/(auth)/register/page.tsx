@@ -47,11 +47,40 @@ export default function RegisterPage() {
     }
 
     try {
-      let signUpUser = null;
-      let signUpSession = null;
-      let clientError = null;
+      // 1. Primary: Same-origin Next.js server register route (immune to CORS preflight & ad-blockers)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          fullName: fullName.trim(),
+          role,
+        }),
+      });
 
-      // 1. Attempt client-side Supabase signUp
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.hasSession) {
+          window.location.href = data.redirectTo || (role === 'student' ? '/onboarding' : `/${role}`);
+          return;
+        } else {
+          setSuccessMsg(
+            'Registration successful! Please check your email inbox to confirm your account before logging in.'
+          );
+          setLoading(false);
+          return;
+        }
+      } else {
+        setErrorMsg(data.error || 'Registration failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+    } catch (serverErr: any) {
+      console.warn('Server registration error, trying direct client fallback:', serverErr);
+
+      // 2. Fallback: Direct client-side Supabase signUp
       try {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -59,103 +88,37 @@ export default function RegisterPage() {
           options: {
             data: {
               full_name: fullName.trim(),
-              role: role,
+              role,
             },
           },
         });
 
         if (error) {
-          clientError = error;
-        } else if (data) {
-          signUpUser = data.user;
-          signUpSession = data.session;
-          if (data.user && data.user.identities && data.user.identities.length === 0) {
-            setErrorMsg('An account with this email already exists. Please sign in instead.');
-            setLoading(false);
-            return;
+          if (error.message.toLowerCase().includes('already registered')) {
+            setErrorMsg('An account with this email already exists. Please sign in.');
+          } else {
+            setErrorMsg(error.message);
           }
+          setLoading(false);
+          return;
         }
-      } catch (err: any) {
-        clientError = err;
-      }
 
-      // 2. If client failed with "Failed to fetch" or CORS error, fallback to server endpoint
-      if (clientError && (clientError.message?.toLowerCase().includes('fetch') || !signUpUser)) {
-        if (!clientError.message?.toLowerCase().includes('already registered')) {
-          try {
-            const res = await fetch('/api/auth/register', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: email.trim(),
-                password,
-                fullName: fullName.trim(),
-                role,
-              }),
-            });
-            const serverData = await res.json();
-            if (serverData.success) {
-              if (serverData.hasSession) {
-                router.push(serverData.redirectTo || '/student');
-                router.refresh();
-              } else {
-                setSuccessMsg(
-                  'Registration successful! Please check your email inbox to confirm your account before logging in.'
-                );
-                setLoading(false);
-              }
-              return;
-            } else {
-              setErrorMsg(serverData.error || 'Registration failed.');
-              setLoading(false);
-              return;
-            }
-          } catch (serverErr: any) {
-            console.error('Server register attempt error:', serverErr);
-          }
+        if (data.session) {
+          window.location.href = role === 'student' ? '/onboarding' : `/${role}`;
+          return;
+        } else if (data.user) {
+          setSuccessMsg(
+            'Registration successful! Please check your email inbox to confirm your account before logging in.'
+          );
+          setLoading(false);
+          return;
         }
-      }
-
-      if (clientError) {
-        if (clientError.message.toLowerCase().includes('already registered')) {
-          setErrorMsg('An account with this email already exists. Please sign in.');
-        } else if (clientError.message.toLowerCase().includes('failed to fetch')) {
-          setErrorMsg('Unable to connect to the authentication server. Please check your network connection and try again.');
-        } else {
-          setErrorMsg(clientError.message);
-        }
+      } catch (clientErr: any) {
+        console.error('Client registration fallback error:', clientErr);
+        setErrorMsg('Unable to connect to the authentication service. Please check your network and try again.');
         setLoading(false);
         return;
       }
-
-      if (signUpSession) {
-        // Immediate session granted
-        if (role === 'student') {
-          router.push('/onboarding');
-        } else if (role === 'teacher') {
-          router.push('/teacher');
-        } else if (role === 'parent') {
-          router.push('/parent');
-        } else if (role === 'admin') {
-          router.push('/admin');
-        } else if (role === 'super_admin') {
-          router.push('/super-admin');
-        } else {
-          router.push('/student');
-        }
-        router.refresh();
-      } else if (signUpUser) {
-        setSuccessMsg(
-          'Registration successful! Please check your email inbox to confirm your account before logging in.'
-        );
-        setLoading(false);
-      } else {
-        setSuccessMsg('Registration request received. Please check your email to complete verification.');
-        setLoading(false);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
-      setLoading(false);
     }
   };
 

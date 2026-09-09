@@ -1,3 +1,4 @@
+// lib/auth/context.tsx
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
@@ -37,111 +38,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const supabase = createClient();
 
-  const fetchProfileData = useCallback(async (authUser: User) => {
+  const syncSessionFromServer = useCallback(async () => {
     try {
-      // 1. Fetch user profile
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle();
+      const res = await fetch('/api/auth/session');
+      const data = await res.json();
 
-      if (prof) {
-        setProfile(prof as Profile);
-        setRole(prof.role as UserRole);
-
-        // 2. If student, fetch student_profile for onboarding status
-        if (prof.role === 'student') {
-          const { data: stdProf } = await supabase
-            .from('student_profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .maybeSingle();
-
-          if (stdProf) {
-            setStudentProfile(stdProf as StudentProfile);
-            setOnboardingCompleted(Boolean(stdProf.onboarding_completed));
-          } else {
-            setStudentProfile(null);
-            setOnboardingCompleted(false);
-          }
-        } else {
-          setStudentProfile(null);
-          setOnboardingCompleted(true);
-        }
+      if (data.authenticated && data.user) {
+        setUser(data.user as User);
+        setProfile(data.profile as Profile);
+        setRole(data.role as UserRole);
+        setOnboardingCompleted(Boolean(data.onboardingCompleted));
+        return true;
       } else {
-        // Fallback to auth metadata if database row is initializing
-        const fallbackRole = (authUser.user_metadata?.role as UserRole) || 'student';
-        setRole(fallbackRole);
+        setUser(null);
         setProfile(null);
+        setRole(null);
         setStudentProfile(null);
-        setOnboardingCompleted(fallbackRole !== 'student');
+        setOnboardingCompleted(false);
+        return false;
       }
     } catch (err) {
-      console.error('Error fetching user profile in AuthProvider:', err);
+      console.warn('Session check error, falling back to local client:', err);
+
+      // Client-side fallback if server route is unavailable
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          const authUser = sessionData.session.user;
+          setUser(authUser);
+          const fallbackRole = (authUser.user_metadata?.role as UserRole) || 'student';
+          setRole(fallbackRole);
+          setProfile({
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: (authUser.user_metadata?.full_name as string) || authUser.email?.split('@')[0] || 'User',
+            role: fallbackRole,
+            created_at: authUser.created_at,
+            updated_at: authUser.updated_at || authUser.created_at,
+          });
+          setOnboardingCompleted(fallbackRole !== 'student');
+          return true;
+        }
+      } catch (clientErr) {
+        console.warn('Client session check fallback failed:', clientErr);
+      }
+
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+      setStudentProfile(null);
+      setOnboardingCompleted(false);
+      return false;
+    } finally {
+      setLoading(false);
     }
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
-    if (!user) return;
-    await fetchProfileData(user);
-  }, [user, fetchProfileData]);
+    await syncSessionFromServer();
+  }, [syncSessionFromServer]);
 
   useEffect(() => {
     let isMounted = true;
 
-    // Initial check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!isMounted) return;
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfileData(session.user).finally(() => {
-          if (isMounted) setLoading(false);
-        });
-      } else {
-        setUser(null);
-        setProfile(null);
-        setRole(null);
-        setStudentProfile(null);
-        setOnboardingCompleted(false);
-        setLoading(false);
-      }
-    });
+    // Initial check via same-origin server session
+    syncSessionFromServer();
 
-    // Listen to real-time auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!isMounted) return;
+    // Listen to real-time auth changes from Supabase client
+    try {
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (event) => {
+        if (!isMounted) return;
 
-      if (session?.user) {
-        setUser(session.user);
-        await fetchProfileData(session.user);
-      } else {
-        setUser(null);
-        setProfile(null);
-        setRole(null);
-        setStudentProfile(null);
-        setOnboardingCompleted(false);
-      }
-      setLoading(false);
-    });
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          await syncSessionFromServer();
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setProfile(null);
+          setRole(null);
+          setStudentProfile(null);
+          setOnboardingCompleted(false);
+          setLoading(false);
+        }
+      });
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase, fetchProfileData]);
+      return () => {
+        isMounted = false;
+        subscription?.unsubscribe();
+      };
+    } catch {
+      // Ignore client listener setup errors
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [supabase, syncSessionFromServer]);
 
   const signOut = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // Ignore server logout error
+    }
+
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore client signout error
+    }
+
     setUser(null);
     setProfile(null);
     setRole(null);
     setStudentProfile(null);
     setOnboardingCompleted(false);
     setLoading(false);
+
+    window.location.href = '/login';
   };
 
   return (

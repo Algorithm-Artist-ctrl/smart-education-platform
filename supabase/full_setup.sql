@@ -27,52 +27,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 4. Automatic profile creation on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-DECLARE
-    assigned_role public.user_role;
-    raw_role TEXT;
-BEGIN
-    raw_role := new.raw_user_meta_data->>'role';
-    IF raw_role IS NOT NULL AND raw_role IN ('student', 'teacher', 'parent', 'admin', 'super_admin') THEN
-        assigned_role := raw_role::public.user_role;
-    ELSE
-        assigned_role := 'student'::public.user_role;
-    END IF;
-
-    INSERT INTO public.profiles (id, email, full_name, role, avatar_url)
-    VALUES (
-        new.id,
-        new.email,
-        COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-        assigned_role,
-        new.raw_user_meta_data->>'avatar_url'
-    )
-    ON CONFLICT (id) DO UPDATE
-    SET full_name = EXCLUDED.full_name,
-        avatar_url = EXCLUDED.avatar_url;
-
-    -- If student, also create base student_profile
-    IF assigned_role = 'student' THEN
-        INSERT INTO public.student_profiles (id)
-        VALUES (new.id)
-        ON CONFLICT (id) DO NOTHING;
-    END IF;
-
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 5. Helper function for role-checking
+-- 4. Helper function for role-checking
 CREATE OR REPLACE FUNCTION public.get_my_role()
 RETURNS public.user_role AS $$
     SELECT role FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 -- 6. Institutions
@@ -132,8 +91,49 @@ CREATE TABLE IF NOT EXISTS public.student_profiles (
     level INT DEFAULT 1,
     onboarding_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Automatic profile creation on auth.users insert
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    assigned_role public.user_role;
+    raw_role TEXT;
+BEGIN
+    raw_role := new.raw_user_meta_data->>'role';
+    IF raw_role IS NOT NULL AND raw_role IN ('student', 'teacher', 'parent', 'admin', 'super_admin') THEN
+        assigned_role := raw_role::public.user_role;
+    ELSE
+        assigned_role := 'student'::public.user_role;
+    END IF;
+
+    INSERT INTO public.profiles (id, email, full_name, role, avatar_url)
+    VALUES (
+        new.id,
+        new.email,
+        COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+        assigned_role,
+        new.raw_user_meta_data->>'avatar_url'
+    )
+    ON CONFLICT (id) DO UPDATE
+    SET full_name = EXCLUDED.full_name,
+        avatar_url = EXCLUDED.avatar_url;
+
+    -- If student, also create base student_profile
+    IF assigned_role = 'student' THEN
+        INSERT INTO public.student_profiles (id)
+        VALUES (new.id)
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- 10. Topics
 CREATE TABLE IF NOT EXISTS public.topics (
