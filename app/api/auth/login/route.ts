@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Supabase configuration is missing in the hosting environment. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your Render Dashboard Environment settings, then redeploy.',
+          code: 'CONFIG_MISSING',
+        },
+        { status: 500 }
+      );
+    }
+
     const supabase = await createClient();
 
     const { data, error } = await supabase.auth.signInWithPassword({
