@@ -118,11 +118,20 @@ export default function LearningMapWorld({
 
       {/* View Mode: 3D Archipelago Canvas */}
       {viewMode === '3d' ? (
-        <div className="relative rounded-3xl border border-indigo-500/20 bg-radial from-slate-900/80 via-slate-950/90 to-cosmic-950 p-6 sm:p-10 overflow-hidden min-h-[480px] flex flex-col justify-between shadow-2xl shadow-indigo-950/40">
+        <div className="relative rounded-3xl border border-indigo-500/30 bg-slate-950 p-6 sm:p-10 overflow-hidden min-h-[500px] flex flex-col justify-between shadow-2xl shadow-indigo-950/40">
+          {/* 3D Celestial Islands Artwork matching Screen 3 */}
+          <div className="absolute inset-0 z-0 opacity-30 mix-blend-screen pointer-events-none">
+            <img
+              src="/images/learning_map_worlds.jpg"
+              alt="Celestial Worlds"
+              className="w-full h-full object-cover object-center scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/20" />
+          </div>
+
           {/* Cosmic Background Stars & Nebulae */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950/40 to-transparent pointer-events-none" />
-          <div className="absolute -top-24 -left-24 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-24 -left-24 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Floating World Islands Grid */}
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
