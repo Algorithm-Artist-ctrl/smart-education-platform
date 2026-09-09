@@ -32,40 +32,89 @@ function LoginForm() {
     const cleanEmail = email.trim();
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password,
-      });
+      let authUser = null;
+      let clientError = null;
 
-      if (error) {
-        if (error.message.toLowerCase().includes('invalid login credentials')) {
+      // 1. Attempt client-side Supabase Auth API
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (error) {
+          clientError = error;
+        } else if (data.user) {
+          authUser = data.user;
+        }
+      } catch (err: any) {
+        // Intercept client-side CORS / preflight / network block ("Failed to fetch")
+        clientError = err;
+      }
+
+      // 2. If client-side failed with "Failed to fetch" or CORS preflight error,
+      // route via same-origin server auth endpoint to bypass browser CORS / extension restrictions
+      if (clientError && (clientError.message?.toLowerCase().includes('fetch') || !authUser)) {
+        if (
+          !clientError.message?.toLowerCase().includes('invalid login') &&
+          !clientError.message?.toLowerCase().includes('confirm')
+        ) {
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: cleanEmail, password }),
+            });
+            const serverData = await res.json();
+            if (serverData.success) {
+              await refreshProfile();
+              router.push(redirectTo || serverData.redirectTo || '/student');
+              router.refresh();
+              return;
+            } else {
+              setErrorMsg(serverData.error || 'Invalid email or password.');
+              setLoading(false);
+              return;
+            }
+          } catch (serverErr: any) {
+            console.error('Server auth attempt error:', serverErr);
+          }
+        }
+      }
+
+      // Handle standard authentication failure from Supabase
+      if (clientError) {
+        const msg = clientError.message.toLowerCase();
+        if (msg.includes('invalid login credentials')) {
           setErrorMsg('Invalid email or password. Please check your credentials and try again.');
-        } else if (error.message.toLowerCase().includes('email not confirmed')) {
+        } else if (msg.includes('email not confirmed')) {
           setErrorMsg('Your email is not verified yet. Please check your inbox for the verification email.');
+        } else if (msg.includes('failed to fetch')) {
+          setErrorMsg('Unable to connect to the authentication server. Please check your network connection and try again.');
         } else {
-          setErrorMsg(error.message);
+          setErrorMsg(clientError.message);
         }
         setLoading(false);
         return;
       }
 
-      if (data.user) {
+      if (authUser) {
         // Synchronize auth context state
         await refreshProfile();
 
         // Fetch user profile to direct to the correct portal
-        let role: string = (data.user.user_metadata?.role as string) || 'student';
+        let role: string = (authUser.user_metadata?.role as string) || 'student';
         try {
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', data.user.id)
+            .eq('id', authUser.id)
             .single();
 
           if (profile?.role) {
             role = profile.role;
           }
-        } catch (e) {
+        } catch {
           // Fallback to metadata
         }
 
@@ -84,7 +133,7 @@ function LoginForm() {
           const { data: sp } = await supabase
             .from('student_profiles')
             .select('onboarding_completed')
-            .eq('id', data.user.id)
+            .eq('id', authUser.id)
             .maybeSingle();
 
           if (sp && sp.onboarding_completed) {

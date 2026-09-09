@@ -47,36 +47,89 @@ export default function RegisterPage() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            role: role,
-          },
-        },
-      });
+      let signUpUser = null;
+      let signUpSession = null;
+      let clientError = null;
 
-      if (error) {
-        if (error.message.toLowerCase().includes('already registered')) {
+      // 1. Attempt client-side Supabase signUp
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              role: role,
+            },
+          },
+        });
+
+        if (error) {
+          clientError = error;
+        } else if (data) {
+          signUpUser = data.user;
+          signUpSession = data.session;
+          if (data.user && data.user.identities && data.user.identities.length === 0) {
+            setErrorMsg('An account with this email already exists. Please sign in instead.');
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (err: any) {
+        clientError = err;
+      }
+
+      // 2. If client failed with "Failed to fetch" or CORS error, fallback to server endpoint
+      if (clientError && (clientError.message?.toLowerCase().includes('fetch') || !signUpUser)) {
+        if (!clientError.message?.toLowerCase().includes('already registered')) {
+          try {
+            const res = await fetch('/api/auth/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: email.trim(),
+                password,
+                fullName: fullName.trim(),
+                role,
+              }),
+            });
+            const serverData = await res.json();
+            if (serverData.success) {
+              if (serverData.hasSession) {
+                router.push(serverData.redirectTo || '/student');
+                router.refresh();
+              } else {
+                setSuccessMsg(
+                  'Registration successful! Please check your email inbox to confirm your account before logging in.'
+                );
+                setLoading(false);
+              }
+              return;
+            } else {
+              setErrorMsg(serverData.error || 'Registration failed.');
+              setLoading(false);
+              return;
+            }
+          } catch (serverErr: any) {
+            console.error('Server register attempt error:', serverErr);
+          }
+        }
+      }
+
+      if (clientError) {
+        if (clientError.message.toLowerCase().includes('already registered')) {
           setErrorMsg('An account with this email already exists. Please sign in.');
+        } else if (clientError.message.toLowerCase().includes('failed to fetch')) {
+          setErrorMsg('Unable to connect to the authentication server. Please check your network connection and try again.');
         } else {
-          setErrorMsg(error.message);
+          setErrorMsg(clientError.message);
         }
         setLoading(false);
         return;
       }
 
-      // Check if user already exists (identities empty in Supabase when email confirmation is active)
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        setErrorMsg('An account with this email already exists. Please sign in instead.');
-        setLoading(false);
-        return;
-      }
-
-      if (data.session) {
-        // Immediate session granted (email confirmation disabled or auto-confirmed)
+      if (signUpSession) {
+        // Immediate session granted
         if (role === 'student') {
           router.push('/onboarding');
         } else if (role === 'teacher') {
@@ -91,8 +144,7 @@ export default function RegisterPage() {
           router.push('/student');
         }
         router.refresh();
-      } else if (data.user) {
-        // Email confirmation required by Supabase auth configuration
+      } else if (signUpUser) {
         setSuccessMsg(
           'Registration successful! Please check your email inbox to confirm your account before logging in.'
         );
