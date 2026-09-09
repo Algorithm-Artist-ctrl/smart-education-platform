@@ -30,8 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="antialiased min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+    <html lang="en" className="h-full dark">
+      <body className="antialiased min-h-screen bg-[#060913] text-slate-100 flex flex-col selection:bg-indigo-500/30 selection:text-indigo-200">
         <I18nProvider>
           <AuthProvider>
             <OfflineSyncBanner />

@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { Subject, Topic, Assessment, Profile, StudentProfile } from '@/types/database.types';
 
+import SidebarRail from '@/components/design-system/SidebarRail';
+import MobileBottomNav from '@/components/shared/MobileBottomNav';
+
 export const dynamic = 'force-dynamic';
 
 export default async function SubjectDetailPage({
@@ -93,24 +96,45 @@ export default async function SubjectDetailPage({
 
       <Navbar profile={profile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
-        {/* Gamification Bar */}
-        <GamificationBar
-          level={studentProfile?.level || 1}
-          currentXp={studentProfile?.xp || 0}
-          streakDays={studentProfile?.streak_days || 0}
-          coins={studentProfile?.coins ?? 100}
-          totalPoints={studentProfile?.total_points || 0}
-        />
+      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex gap-6 pb-28 md:pb-12">
+        {/* Left Sidebar Rail */}
+        <SidebarRail />
 
-        {/* Back Link */}
-        <Link
-          href="/student/map"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-400 transition group"
-        >
-          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-          <span>Back to Celestial Map</span>
-        </Link>
+        <main className="flex-1 min-w-0 space-y-6">
+          {/* Gamification Bar */}
+          <GamificationBar
+            level={studentProfile?.level || 1}
+            currentXp={studentProfile?.xp || 0}
+            streakDays={studentProfile?.streak_days || studentProfile?.current_streak || 0}
+            coins={studentProfile?.coins || 0}
+            totalPoints={studentProfile?.total_points || 0}
+          />
+
+          {/* Sub-Navigation Tabs matching Screen 4 */}
+          <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 border-b border-white/10 text-xs font-semibold">
+            <div className="flex items-center gap-2">
+              <Link
+                href="/student/map"
+                className="inline-flex items-center gap-1 text-slate-400 hover:text-indigo-300 transition mr-2 pr-3 border-r border-white/10"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Map</span>
+              </Link>
+              {['Overview', 'Lessons', 'Quizzes', 'Assignments', 'Notes'].map((tab, idx) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`px-3 py-1.5 rounded-xl transition ${
+                    idx === 0
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
 
         {/* Subject World Hero Banner matching Screen 4 */}
         <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/40 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
@@ -271,12 +295,15 @@ export default async function SubjectDetailPage({
           </div>
         </div>
       </main>
+    </div>
 
       {/* Nova AI Companion */}
       <NovaAICompanion
         studentName={profile?.full_name?.split(' ')[0] || 'Explorer'}
         level={studentProfile?.level || 1}
       />
+
+      <MobileBottomNav />
     </div>
   );
 }

@@ -56,33 +56,34 @@ export default async function ParentDashboardPage() {
     .select('*, profile:profiles(*), class:classes(*), section:sections(*)')
     .eq('parent_id', user.id);
 
-  // If no parent_id link, fetch first student profile for preview so parent always sees real telemetry
-  let children = (linkedChildren || []) as any[];
+  const children = (linkedChildren || []) as any[];
+
   if (children.length === 0) {
-    const { data: allStudents } = await supabase
-      .from('student_profiles')
-      .select('*, profile:profiles(*), class:classes(*), section:sections(*)')
-      .limit(1);
-    if (allStudents && allStudents.length > 0) {
-      children = allStudents;
-    }
+    return (
+      <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+        <Navbar profile={userProfile} />
+        <main className="flex-1 max-w-xl mx-auto px-4 py-24 text-center flex flex-col items-center justify-center">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center mb-5 shadow-xl shadow-amber-950/30">
+            <Heart className="w-8 h-8 text-rose-400" />
+          </div>
+          <h2 className="text-2xl font-black text-white">No Student Linked Yet</h2>
+          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+            Your parent portal is secure and only displays verified student accounts. Please provide your registered email to your institution administrator or student to link their profile.
+          </p>
+        </main>
+      </div>
+    );
   }
 
-  // If child exists, fetch child's performance details
-  let childQuizAttempts: any[] = [];
-  let childWeakTopics: any[] = [];
+  // Fetch verified child's performance details
+  const firstChildId = children[0].id;
+  const [attRes, wtRes] = await Promise.all([
+    supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).limit(5),
+    supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active'),
+  ]);
 
-  if (children.length > 0) {
-    const firstChildId = children[0].id;
-    const [attRes, wtRes] = await Promise.all([
-      supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).limit(5),
-      supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active'),
-    ]);
-
-    childQuizAttempts = attRes.data || [];
-    childWeakTopics = wtRes.data || [];
-  }
-
+  const childQuizAttempts = attRes.data || [];
+  const childWeakTopics = wtRes.data || [];
   const activeChild = children[0];
 
   return (

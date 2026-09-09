@@ -113,7 +113,7 @@ export default async function AdminDashboardPage() {
               <GraduationCap className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {studentsCount || 12}
+              {studentsCount}
             </div>
             <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
               Enrolled students
@@ -126,7 +126,7 @@ export default async function AdminDashboardPage() {
               <Users className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {teachersCount || 4}
+              {teachersCount}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               Verified educators

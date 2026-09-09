@@ -5,6 +5,8 @@ import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
 import LearningMapWorld from '@/components/gamification/LearningMapWorld';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
+import SidebarRail from '@/components/design-system/SidebarRail';
+import MobileBottomNav from '@/components/shared/MobileBottomNav';
 import { Subject, Profile, StudentProfile } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
@@ -54,30 +56,36 @@ export default async function LearningMapPage() {
 
       <Navbar profile={profile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
-        {/* Gamification status bar */}
-        <GamificationBar
-          level={studentProfile?.level || 1}
-          currentXp={studentProfile?.xp || 0}
-          streakDays={studentProfile?.streak_days || 0}
-          coins={studentProfile?.coins ?? 100}
-          totalPoints={studentProfile?.total_points || 0}
-        />
+      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex gap-6 pb-28 md:pb-12">
+        <SidebarRail />
 
-        {/* 3D Celestial Archipelago */}
-        <div className="cosmic-card p-4 sm:p-6 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-2xl relative overflow-hidden">
-          <LearningMapWorld
-            subjects={subjects}
-            subjectProgress={subjectProgress}
+        <main className="flex-1 min-w-0 space-y-6">
+          {/* Gamification status bar */}
+          <GamificationBar
+            level={studentProfile?.level || 1}
+            currentXp={studentProfile?.xp || 0}
+            streakDays={studentProfile?.streak_days || studentProfile?.current_streak || 0}
+            coins={studentProfile?.coins || 0}
+            totalPoints={studentProfile?.total_points || 0}
           />
-        </div>
-      </main>
+
+          {/* 3D Celestial Archipelago */}
+          <div className="cosmic-card p-4 sm:p-6 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-2xl relative overflow-hidden">
+            <LearningMapWorld
+              subjects={subjects}
+              subjectProgress={subjectProgress}
+            />
+          </div>
+        </main>
+      </div>
 
       {/* Nova AI Companion */}
       <NovaAICompanion
         studentName={profile?.full_name?.split(' ')[0] || 'Explorer'}
         level={studentProfile?.level || 1}
       />
+
+      <MobileBottomNav />
     </div>
   );
 }

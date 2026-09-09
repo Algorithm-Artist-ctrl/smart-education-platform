@@ -23,9 +23,11 @@ import {
   Check,
   Brain,
   HelpCircle,
-  PlayCircle
+  PlayCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import SidebarRail from '@/components/design-system/SidebarRail';
+import MobileBottomNav from '@/components/shared/MobileBottomNav';
 
 function RevisionContent() {
   const router = useRouter();
@@ -143,15 +145,18 @@ function RevisionContent() {
 
       <Navbar profile={profile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
-        {/* Gamification Bar */}
-        <GamificationBar
-          level={studentProfile?.level || 1}
-          currentXp={studentProfile?.xp || 0}
-          streakDays={studentProfile?.streak_days || 0}
-          coins={studentProfile?.coins ?? 100}
-          totalPoints={studentProfile?.total_points || 0}
-        />
+      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex gap-6 pb-28 md:pb-12">
+        <SidebarRail />
+
+        <main className="flex-1 min-w-0 space-y-6">
+          {/* Gamification Bar */}
+          <GamificationBar
+            level={studentProfile?.level || 1}
+            currentXp={studentProfile?.xp || 0}
+            streakDays={studentProfile?.streak_days || studentProfile?.current_streak || 0}
+            coins={studentProfile?.coins || 0}
+            totalPoints={studentProfile?.total_points || 0}
+          />
 
         {/* Hero Header matching Screen 8 */}
         <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-purple-950/40 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
@@ -456,13 +461,16 @@ function RevisionContent() {
             </Link>
           </div>
         )}
-      </main>
+        </main>
+      </div>
 
       {/* Floating Nova AI Companion */}
       <NovaAICompanion
         studentName={profile?.full_name?.split(' ')[0] || 'Explorer'}
         level={studentProfile?.level || 1}
       />
+
+      <MobileBottomNav />
     </div>
   );
 }

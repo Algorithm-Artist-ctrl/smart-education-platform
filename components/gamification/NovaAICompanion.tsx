@@ -1,7 +1,7 @@
 // components/gamification/NovaAICompanion.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Sparkles, X, Send, Bot, ArrowRight, Lightbulb, MessageSquare } from 'lucide-react';
 
@@ -25,6 +25,13 @@ export default function NovaAICompanion({
   className = '',
 }: NovaAICompanionProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener('open-nova-mentor', handleOpen);
+    return () => window.removeEventListener('open-nova-mentor', handleOpen);
+  }, []);
+
   const [messages, setMessages] = useState<Array<{ sender: 'nova' | 'user'; text: string }>>([
     {
       sender: 'nova',

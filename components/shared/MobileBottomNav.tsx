@@ -3,10 +3,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Map, Zap, RefreshCw, Compass } from 'lucide-react';
+import { Home, Map, Zap, Sparkles, User } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+
+  const handleNavClick = (e: React.MouseEvent, isNova?: boolean) => {
+    if (isNova) {
+      e.preventDefault();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-nova-mentor'));
+      }
+    }
+  };
 
   // Only render for student routes
   if (!pathname.startsWith('/student')) {
@@ -33,16 +42,17 @@ export default function MobileBottomNav() {
       isActive: pathname.startsWith('/student/quests'),
     },
     {
-      label: 'Revision',
-      href: '/student/revision',
-      icon: RefreshCw,
-      isActive: pathname.startsWith('/student/revision'),
+      label: 'Nova',
+      href: '#nova',
+      icon: Sparkles,
+      isActive: false,
+      isNova: true,
     },
     {
-      label: 'Career',
-      href: '/student/career',
-      icon: Compass,
-      isActive: pathname.startsWith('/student/career'),
+      label: 'Profile',
+      href: '/student/achievements',
+      icon: User,
+      isActive: pathname.startsWith('/student/achievements'),
     },
   ];
 
@@ -58,6 +68,7 @@ export default function MobileBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.isNova)}
               className={`flex flex-col items-center justify-center min-h-[48px] py-1 transition-colors relative ${
                 item.isActive
                   ? 'text-cyan-400 font-bold'

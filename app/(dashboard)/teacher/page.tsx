@@ -64,7 +64,8 @@ export default async function TeacherDashboardPage() {
     assignmentsRes,
     submissionsRes,
     studentsRes,
-    weakTopicsRes
+    weakTopicsRes,
+    attemptsRes
   ] = await Promise.all([
     supabase.from('classes').select('*'),
     supabase.from('subjects').select('*'),
@@ -72,6 +73,7 @@ export default async function TeacherDashboardPage() {
     supabase.from('assignment_submissions').select('*, assignment:assignments(*), student:profiles(*)').order('submitted_at', { ascending: false }).limit(10),
     supabase.from('student_profiles').select('*, profile:profiles(*), class:classes(*)'),
     supabase.from('weak_topics').select('*, topic:topics(*), student:profiles(*)').eq('status', 'active').limit(6),
+    supabase.from('quiz_attempts').select('percentage'),
   ]);
 
   const classes = (classesRes.data || []) as AcademicClass[];
@@ -80,8 +82,13 @@ export default async function TeacherDashboardPage() {
   const submissions = (submissionsRes.data || []) as any[];
   const students = (studentsRes.data || []) as any[];
   const activeWeakTopics = (weakTopicsRes.data || []) as any[];
+  const allAttempts = (attemptsRes.data || []) as any[];
 
   const pendingSubmissions = submissions.filter((s) => s.status === 'submitted');
+
+  const realMastery = allAttempts.length > 0 
+    ? (allAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / allAttempts.length).toFixed(1)
+    : '0';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -123,7 +130,7 @@ export default async function TeacherDashboardPage() {
               <Users className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {students.length || 24}
+              {students.length}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               100% telemetry synced
@@ -136,7 +143,7 @@ export default async function TeacherDashboardPage() {
               <TrendingUp className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              78.4%
+              {realMastery}%
             </div>
             <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
               +4.2% from last week

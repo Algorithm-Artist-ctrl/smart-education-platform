@@ -1,11 +1,14 @@
 // app/(dashboard)/student/page.tsx
-// Screen 2: Student Dashboard (Home) — Full-Stack Gamified 3D Experience
+// Screen 2: Student Dashboard (Home) — Full-Stack Gamified 3D Experience matching Reference Screen 2
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
-import GamificationBar from '@/components/gamification/GamificationBar';
+import MobileBottomNav from '@/components/shared/MobileBottomNav';
+import SidebarRail from '@/components/design-system/SidebarRail';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
+import { calculateLevel } from '@/lib/gamification-engine';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -17,11 +20,11 @@ import {
   Target, 
   Calendar, 
   Clock, 
-  CheckCircle2, 
   ChevronRight,
-  Bot
+  Award,
+  Plus
 } from 'lucide-react';
-import { Profile, StudentProfile, Subject, Quest, WeakTopic, StudyPlan } from '@/types/database.types';
+import { Profile, Quest, Subject, WeakTopic, StudyPlan } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +58,6 @@ export default async function StudentDashboardPage() {
     .eq('id', user.id)
     .maybeSingle();
 
-  // If onboarding hasn't been completed, redirect to onboarding
   if (studentProfile && !studentProfile.onboarding_completed) {
     redirect('/onboarding');
   }
@@ -69,11 +71,30 @@ export default async function StudentDashboardPage() {
     updated_at: user.created_at,
   };
 
-  const studentName = userProfile.full_name?.split(' ')[0] || 'Learner';
-  const level = studentProfile?.level || 1;
+  const studentName = userProfile.full_name?.split(' ')[0] || 'Cadet';
   const totalXp = studentProfile?.total_points || 0;
   const streak = studentProfile?.current_streak || 0;
-  const coins = studentProfile?.coins ?? 100;
+  const coins = studentProfile?.coins || 0;
+
+  // Real calculations via central gamification engine
+  const levelInfo = calculateLevel(totalXp);
+
+  // Calculate real rank from database
+  const { count: higherRankCount } = await supabase
+    .from('student_profiles')
+    .select('*', { count: 'exact', head: true })
+    .gt('total_points', totalXp);
+
+  const { count: totalStudentsCount } = await supabase
+    .from('student_profiles')
+    .select('*', { count: 'exact', head: true });
+
+  const currentRank = (higherRankCount || 0) + 1;
+  const totalStudents = Math.max(1, totalStudentsCount || 1);
+  const rankPercentile = Math.max(1, Math.round((currentRank / totalStudents) * 100));
+  const rankText = totalStudents > 1 && rankPercentile <= 50 
+    ? `Top ${rankPercentile}% In Class` 
+    : `#${currentRank} In Class`;
 
   // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans
   const todayStr = new Date().toISOString().split('T')[0];
@@ -108,232 +129,435 @@ export default async function StudentDashboardPage() {
   const weakTopics: WeakTopic[] = weakTopicsRes.data || [];
   const todayPlans: StudyPlan[] = studyPlansRes.data || [];
 
-  // Identify today's primary quest
-  const primaryQuest: Quest = quests[0] || {
-    id: 'default-quest',
-    student_id: user.id,
-    title: 'Master Quadratic Equations',
-    subject_name: 'Mathematics',
-    duration_minutes: 20,
-    xp_reward: 150,
-    coins_reward: 20,
-    progress_percent: 80,
-    status: 'in_progress',
-    quest_type: 'topic',
-    created_at: new Date().toISOString(),
-  };
-
-  const primaryWeakTopic = weakTopics[0]?.topic?.name || 'Quadratic Equations';
+  const primaryQuest: Quest | null = quests[0] || null;
+  const primaryWeakTopic = weakTopics[0]?.topic?.name || null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-cosmic-950 text-slate-100 pb-20 md:pb-12 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#060913] text-slate-100 pb-20 md:pb-12 selection:bg-indigo-500/30 selection:text-indigo-200">
       <Navbar profile={userProfile} />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 space-y-6">
+      {/* Main Responsive Grid with Left Sidebar Rail */}
+      <div className="flex-1 max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 flex gap-6">
         
-        {/* Top Gamification Bar (Level, Streak, Coins, Rank) */}
-        <GamificationBar
-          level={level}
-          totalXp={totalXp}
-          streak={streak}
-          coins={coins}
-          rankText="Top 5%"
-        />
+        {/* Left Slim Icon Rail (Visible on Desktop, matching Screen 2) */}
+        <SidebarRail />
 
-        {/* Hero Section: Welcome & Nova AI Prompt (Matching Screen 2) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          
-          {/* Welcome Card (8 Cols) */}
-          <div className="lg:col-span-8 glass-card rounded-3xl p-6 sm:p-8 border border-indigo-500/20 relative overflow-hidden flex flex-col justify-between shadow-2xl shadow-indigo-950/40">
-            <div className="absolute -top-12 -right-12 w-64 h-64 bg-gradient-to-br from-indigo-500/15 via-cyan-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0 space-y-6">
 
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Adventure Mode Active</span>
+          {/* Top Hero Section: Welcome + Level Card & Telemetry Badges (Exact Screen 2 Layout) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            
+            {/* Left Welcome Box (7 Cols) */}
+            <div className="lg:col-span-7 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-indigo-950/40 border border-indigo-500/25 p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden flex flex-col justify-between shadow-2xl shadow-indigo-950/30">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-cyan-300 text-xs font-bold mb-3">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Cadet Learning Matrix</span>
+                </div>
+
+                <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                  Welcome back, <br className="hidden sm:inline" />
+                  <span className="bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                    {studentName}!
+                  </span>
+                </h1>
+
+                <p className="text-sm text-slate-300 mt-2 italic font-medium">
+                  "Small steps everyday lead to big results."
+                </p>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                Welcome back, <span className="bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">{studentName}!</span>
-              </h1>
-              <p className="text-sm text-slate-300 mt-1 italic font-medium">
-                "Small steps everyday lead to big results."
-              </p>
-            </div>
+              <div className="relative z-10 mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/student/map"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 active:scale-95"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Explore Learning Map</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
 
-            {/* Today's Main Quest Widget inside Hero (Reference Screen 2) */}
-            <div className="relative z-10 mt-6 pt-5 border-t border-white/10">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
-                <div>
-                  <span className="text-[10px] uppercase font-black tracking-wider text-cyan-400">
-                    Today's Quest
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black text-white">
-                    {primaryQuest.title}
-                  </h3>
-                  <div className="text-xs text-slate-400">
-                    {primaryQuest.subject_name || 'Curriculum'} · {primaryQuest.duration_minutes} min
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 text-indigo-400 fill-indigo-400" />
-                    +{primaryQuest.xp_reward} XP
-                  </span>
-                  <span className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                    +{primaryQuest.coins_reward} Coins
-                  </span>
-                </div>
-              </div>
-
-              {/* Quest Progress Bar */}
-              <div className="space-y-1.5 mt-3">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-400">Mission Progress</span>
-                  <span className="text-white font-bold">{primaryQuest.progress_percent}%</span>
-                </div>
-                <div className="w-full bg-slate-900 rounded-full h-2.5 p-0.5 border border-white/5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 transition-all duration-700 shadow-sm shadow-cyan-400"
-                    style={{ width: `${primaryQuest.progress_percent}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
                 <Link
                   href="/student/revision"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all flex items-center gap-1.5"
                 >
-                  <span>Continue Quest</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <Target className="w-4 h-4 text-cyan-400" />
+                  <span>Revision Arena</span>
                 </Link>
               </div>
             </div>
-          </div>
 
-          {/* Right: Nova AI Companion Card (4 Cols) */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <NovaAICompanion
-              weakTopicName={primaryWeakTopic}
-              studentName={studentName}
-              recommendedSubject="Mathematics"
-              className="flex-1"
-            />
-
-            {/* Quick Challenge CTA Card */}
-            <div className="glass-card rounded-2xl p-4 border border-purple-500/20 shadow-xl shadow-purple-950/20 flex items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] uppercase font-black text-purple-400">Daily Challenge</span>
-                <h4 className="text-xs font-bold text-white">Diagnostic Quiz</h4>
-                <p className="text-[11px] text-slate-400">Earn +100 XP & unlock badges</p>
-              </div>
-              <Link
-                href="/student/revision"
-                className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all shrink-0"
-              >
-                Play Now
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Subject Worlds Quick Strip */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-white flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-400" />
-              Your Subject Worlds
-            </h2>
-            <Link
-              href="/student/map"
-              className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
-            >
-              <span>View Full Learning Map</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {subjects.map((sub, idx) => (
-              <Link
-                key={sub.id}
-                href={`/student/subjects/${sub.id}`}
-                className="glass-card-hover rounded-2xl p-4 border border-white/10 block group relative overflow-hidden"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-lg font-bold">
-                    {idx === 0 ? '🏰' : idx === 1 ? '⚛' : '💻'}
-                  </div>
-                  <span className="text-[11px] font-bold text-slate-400">
-                    Level {idx + 1} / 10
-                  </span>
-                </div>
-                <h3 className="text-sm font-black text-white group-hover:text-cyan-300 transition-colors">
-                  {sub.name}
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                  {sub.description || 'Explore levels, quizzes & challenges'}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Mission Control Today's Schedule Preview */}
-        <div className="glass-card rounded-3xl p-6 border border-white/10 shadow-xl shadow-slate-950/40">
-          <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-cyan-400" />
-              <h3 className="text-base font-black text-white">Today's Missions</h3>
-            </div>
-            <Link
-              href="/student/study-plan"
-              className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-            >
-              <span>Manage Planner</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {todayPlans.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {todayPlans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 flex items-center justify-between gap-3"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-white">{plan.title}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
-                      {plan.subject?.name || 'Academic'} · {plan.duration_minutes} min
+            {/* Right Level Card & Stats Badges (5 Cols, Exact Screen 2) */}
+            <div className="lg:col-span-5 flex flex-col justify-between gap-3">
+              
+              {/* Big Level Card */}
+              <div className="rounded-3xl bg-slate-900/80 border border-indigo-500/30 p-5 backdrop-blur-xl shadow-xl shadow-indigo-950/20 relative overflow-hidden flex-1 flex flex-col justify-center">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-white/20 flex items-center justify-center text-cyan-300 shadow-md shadow-indigo-600/30">
+                      <Award className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-black tracking-wider text-cyan-400">
+                        Rank Status
+                      </span>
+                      <h3 className="text-xl font-black text-white leading-none">
+                        Level {levelInfo.level}
+                      </h3>
                     </div>
                   </div>
-                  <Link
-                    href="/student/revision"
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold transition-all"
-                  >
-                    Start
-                  </Link>
+
+                  <span className="font-mono text-xs font-bold text-slate-300">
+                    {levelInfo.currentLevelXP.toLocaleString()} / {levelInfo.nextLevelXP.toLocaleString()} XP
+                  </span>
                 </div>
-              ))}
+
+                {/* XP Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="w-full bg-slate-950 rounded-full h-3 p-0.5 border border-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 transition-all duration-700 shadow-sm shadow-cyan-400"
+                      style={{ width: `${levelInfo.progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] font-semibold text-slate-400">
+                    <span>Progress to Level {levelInfo.level + 1}</span>
+                    <span className="font-mono text-cyan-400">{levelInfo.progressPercent}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Telemetry Cards Row: Streak, Coins, Rank */}
+              <div className="grid grid-cols-3 gap-2.5">
+                
+                {/* Streak */}
+                <div className="rounded-2xl bg-slate-900/70 border border-orange-500/25 p-3 text-center backdrop-blur-xl shadow-md">
+                  <div className="w-7 h-7 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center mx-auto mb-1 text-orange-400">
+                    <Flame className="w-4 h-4 fill-orange-400/80 animate-pulse" />
+                  </div>
+                  <div className="text-base font-black text-white font-mono leading-none">
+                    {streak}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    Day Streak
+                  </div>
+                </div>
+
+                {/* Coins */}
+                <div className="rounded-2xl bg-slate-900/70 border border-amber-500/25 p-3 text-center backdrop-blur-xl shadow-md">
+                  <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-1 text-amber-400">
+                    <Coins className="w-4 h-4 fill-amber-400/80" />
+                  </div>
+                  <div className="text-base font-black text-white font-mono leading-none">
+                    {coins}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    Coins
+                  </div>
+                </div>
+
+                {/* Class Rank */}
+                <div className="rounded-2xl bg-slate-900/70 border border-emerald-500/25 p-3 text-center backdrop-blur-xl shadow-md">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-1 text-emerald-400">
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <div className="text-xs font-black text-white truncate leading-none">
+                    {rankText}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    Class Rank
+                  </div>
+                </div>
+
+              </div>
+
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <p className="text-xs text-slate-400">No scheduled tasks for today.</p>
+
+          </div>
+
+          {/* Middle Row: 3D Character Illustration + Today's Quest + Nova AI Widget (Exact Screen 2) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+            
+            {/* 3D Cadet Character Card (4 cols on md/lg) */}
+            <div className="md:col-span-4 rounded-3xl bg-slate-900/70 border border-white/10 relative overflow-hidden flex flex-col justify-end p-5 min-h-[220px] shadow-xl group">
+              <Image
+                src="/images/hero_student.jpg"
+                alt="Student Cadet Adventure"
+                fill
+                className="object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-80"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                  Cadet Profile
+                </span>
+                <h3 className="text-lg font-black text-white">
+                  {userProfile.full_name}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Ready for today's learning voyage.
+                </p>
+              </div>
+            </div>
+
+            {/* Today's Quest Card (4 cols on md/lg) */}
+            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-indigo-950/40 border border-indigo-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-400">
+                    <Target className="w-4 h-4" />
+                    <span>Today's Quest</span>
+                  </div>
+                  {primaryQuest && (
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {primaryQuest.duration_minutes || 15} min
+                    </span>
+                  )}
+                </div>
+
+                {primaryQuest ? (
+                  <>
+                    <h4 className="text-base font-black text-white line-clamp-1 mb-1">
+                      {primaryQuest.title}
+                    </h4>
+                    <div className="text-xs text-indigo-300/80 mb-3">
+                      {primaryQuest.subject_name || 'Mathematics'}
+                    </div>
+
+                    <div className="space-y-1 mb-4">
+                      <div className="flex justify-between text-xs font-semibold text-slate-300">
+                        <span>Progress</span>
+                        <span className="font-mono text-cyan-400">{primaryQuest.progress_percent || 0}%</span>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/5">
+                        <div
+                          className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full"
+                          style={{ width: `${primaryQuest.progress_percent || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-4 text-center">
+                    <p className="text-xs text-slate-300 font-medium">
+                      No quest assigned today yet.
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Explore your subject worlds to claim daily challenges.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-purple-400 fill-purple-400" />
+                    +{primaryQuest?.xp_reward || 100} XP
+                  </span>
+                  <span className="text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                    <Coins className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    +{primaryQuest?.coin_reward || primaryQuest?.coins_reward || 15}
+                  </span>
+                </div>
+
+                <Link
+                  href={primaryQuest ? '/student/revision' : '/student/map'}
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 flex items-center gap-1 active:scale-95 transition-all"
+                >
+                  <span>{primaryQuest ? 'Continue' : 'Explore'}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Nova AI Companion Card (4 cols on md/lg) */}
+            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-cyan-950/30 border border-cyan-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-8 h-8 rounded-xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950">
+                      <Image
+                        src="/images/nova_robot.jpg"
+                        alt="Nova AI Mentor"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-black tracking-wider text-cyan-400 flex items-center gap-1">
+                        Nova AI
+                        <Sparkles className="w-2.5 h-2.5" />
+                      </span>
+                      <h4 className="text-xs font-bold text-white leading-none">
+                        Study Companion
+                      </h4>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-slate-200 leading-relaxed mb-3">
+                  {primaryWeakTopic ? (
+                    <>
+                      Hi <span className="font-bold text-white">{studentName}</span>! Want to practice 5 questions on your weak topic: <span className="text-cyan-300 font-bold">"{primaryWeakTopic}"</span>?
+                    </>
+                  ) : (
+                    <>
+                      Hi <span className="font-bold text-white">{studentName}</span>! You are on a <span className="text-orange-400 font-bold">{streak}-day streak</span>. Ready to master new concepts today?
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href="/student/revision"
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Start Practice</span>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Lower Section: Subject Worlds Strip */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-indigo-400" />
+                  Your Subject Worlds
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Explore academic sectors and unlock chapters along your learning journey
+                </p>
+              </div>
+
               <Link
-                href="/student/study-plan"
-                className="inline-block mt-2 text-xs font-bold text-cyan-400 hover:underline"
+                href="/student/map"
+                className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
               >
-                + Add your first study mission
+                <span>View Full Learning Map</span>
+                <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-          )}
-        </div>
 
-      </main>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {subjects.map((sub, idx) => {
+                const completedLevels = idx === 0 ? 8 : idx === 1 ? 5 : 0;
+                const totalLevels = idx === 0 ? 12 : idx === 1 ? 10 : 10;
+                const mastery = Math.round((completedLevels / totalLevels) * 100);
+
+                return (
+                  <Link
+                    key={sub.id}
+                    href={`/student/subjects/${sub.id}`}
+                    className="group rounded-2xl bg-slate-900/70 hover:bg-slate-900/90 border border-white/10 hover:border-indigo-500/40 p-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 shadow-lg block"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600/30 to-purple-600/30 border border-indigo-500/30 flex items-center justify-center text-cyan-400 text-sm font-bold group-hover:scale-105 transition-transform">
+                        {idx === 0 ? 'π' : idx === 1 ? '⚛' : idx === 2 ? '💻' : '📖'}
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                        {completedLevels}/{totalLevels} Levels
+                      </span>
+                    </div>
+
+                    <h3 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
+                      {sub.name}
+                    </h3>
+                    <p className="text-xs text-slate-400 line-clamp-1 mb-3">
+                      {sub.description || 'Curriculum world'}
+                    </p>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
+                        <span>Mastery</span>
+                        <span className="text-cyan-400 font-mono">{mastery}%</span>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                          style={{ width: `${mastery}%` }}
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Today's Missions / Schedule Strip */}
+          <div className="rounded-3xl bg-slate-900/70 border border-white/10 p-6 backdrop-blur-xl shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-black text-white">Today's Missions</h3>
+              </div>
+              <Link
+                href="/student/study-plan"
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+              >
+                <span>Mission Control</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {todayPlans.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {todayPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="p-3.5 rounded-2xl bg-slate-950/60 border border-white/5 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-white line-clamp-1">{plan.title}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        {plan.subject?.name || 'Academic'} · {plan.duration_minutes || 20} min
+                      </div>
+                    </div>
+                    <Link
+                      href="/student/revision"
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold transition-all shrink-0"
+                    >
+                      Start
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-xs text-slate-400">No missions scheduled for today yet.</p>
+                <Link
+                  href="/student/study-plan"
+                  className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-cyan-400 hover:underline"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add your first study mission</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+        </main>
+      </div>
+
+      {/* Floating Nova AI Companion (Persistent across student portal) */}
+      <NovaAICompanion
+        weakTopicName={primaryWeakTopic}
+        studentName={studentName}
+        level={levelInfo.level}
+        mode="floating"
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

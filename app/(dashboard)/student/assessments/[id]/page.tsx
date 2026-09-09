@@ -3,6 +3,7 @@
 
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Assessment, Question, Profile } from '@/types/database.types';
 import { processAssessmentEvaluation } from '@/lib/learning-engine';
@@ -370,116 +371,143 @@ export default function AssessmentTakePage({ params }: { params: Promise<{ id: s
           })}
         </div>
 
-        {/* Nova AI Companion Hint Banner (Screen 5 requirement) */}
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 backdrop-blur-md flex items-start gap-3 shadow-lg">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 border border-indigo-500/30">
-            <Bot className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div className="min-w-0 text-xs">
-            <div className="font-bold text-indigo-300 flex items-center gap-1.5 mb-0.5">
-              <span>Nova AI Tip</span>
-              <Sparkles className="w-3 h-3 text-amber-400" />
+        {/* Dual-Column Quiz Arena matching Screen 5 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: 3D Nova Robot Companion with Speech Bubble (4 cols) */}
+          <div className="lg:col-span-4 rounded-3xl bg-slate-900/80 border border-cyan-500/25 p-5 backdrop-blur-xl shadow-xl flex flex-col items-center text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-36 h-36 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* 3D Nova Robot Image */}
+            <div className="relative w-36 h-36 rounded-2xl overflow-hidden mb-3 border-2 border-cyan-400/40 shadow-xl shadow-cyan-500/20 bg-slate-950">
+              <Image
+                src="/images/nova_robot.jpg"
+                alt="Nova AI Mentor"
+                fill
+                className="object-cover"
+              />
             </div>
-            <p className="text-slate-300 leading-relaxed">
-              Read carefully and eliminate unlikely answers first. You earn extra XP for accuracy!
-            </p>
+
+            {/* Speech Bubble */}
+            <div className="relative bg-cyan-950/40 border border-cyan-400/30 rounded-2xl p-3.5 text-xs text-slate-200 mb-4 shadow-md w-full">
+              <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-cyan-300 mb-1">
+                <Sparkles className="w-3 h-3" />
+                <span>You're doing great!</span>
+              </div>
+              <p className="leading-relaxed">
+                Think step by step. You can do it!
+              </p>
+            </div>
+
+            {/* Your Progress */}
+            <div className="w-full space-y-1.5 pt-2 border-t border-white/10 text-left">
+              <div className="flex justify-between text-xs font-semibold text-slate-300">
+                <span>Your Progress</span>
+                <span className="font-mono text-cyan-400 font-bold">{currentIndex + 1}/{questions.length}</span>
+              </div>
+              <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-white/10">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.round(((currentIndex + 1) / Math.max(1, questions.length)) * 100)}%` }}
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Main Question Card matching Screen 5 */}
-        <div className="cosmic-card rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl p-5 sm:p-8 shadow-2xl space-y-6">
-          <div className="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-white/10">
-            <span className="font-bold uppercase tracking-wider text-indigo-400">
-              Question {currentIndex + 1} of {questions.length}
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-white/5 font-semibold text-slate-300">
-              {currentQ?.marks || 1} XP Point(s)
-            </span>
-          </div>
+          {/* Right Column: Main Question Card matching Screen 5 (8 cols) */}
+          <div className="lg:col-span-8 cosmic-card rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl p-5 sm:p-8 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-white/10">
+              <span className="font-bold uppercase tracking-wider text-indigo-400">
+                Question {currentIndex + 1} of {questions.length}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-800 border border-white/5 font-semibold text-slate-300">
+                {currentQ?.marks || 1} XP Point(s)
+              </span>
+            </div>
 
-          <h3 className="text-base sm:text-xl font-bold text-white leading-relaxed">
-            {currentQ?.question_text}
-          </h3>
+            <h3 className="text-base sm:text-xl font-bold text-white leading-relaxed">
+              {currentQ?.question_text}
+            </h3>
 
-          {/* Interactive Option Cards */}
-          <div className="space-y-3 pt-1">
-            {(currentQ?.options as string[])?.map((optionText, optIdx) => {
-              const isSelected = selectedAnswers[currentQ.id] === optIdx;
+            {/* Interactive Option Cards */}
+            <div className="space-y-3 pt-1">
+              {(currentQ?.options as string[])?.map((optionText, optIdx) => {
+                const isSelected = selectedAnswers[currentQ.id] === optIdx;
 
-              return (
-                <button
-                  key={optIdx}
-                  type="button"
-                  onClick={() => selectOption(currentQ.id, optIdx)}
-                  className={`w-full min-h-[56px] p-4 rounded-2xl border text-left text-xs sm:text-sm font-medium transition-all flex items-center justify-between gap-3 active:scale-[0.99] touch-manipulation group ${
-                    isSelected
-                      ? 'border-indigo-500 bg-indigo-600/20 text-white font-bold ring-1 ring-indigo-500 shadow-xl shadow-indigo-950/60'
-                      : 'border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-white/20 text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span
-                      className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-500/40'
-                          : 'bg-slate-800 border border-white/10 text-slate-400 group-hover:text-white'
-                      }`}
-                    >
-                      {String.fromCharCode(65 + optIdx)}
-                    </span>
-                    <span className="break-words">{optionText}</span>
-                  </div>
-
-                  {isSelected && (
-                    <div className="w-6 h-6 rounded-full bg-indigo-500/30 border border-indigo-400 flex items-center justify-center text-indigo-300 shrink-0">
-                      <Check className="w-3.5 h-3.5" />
+                return (
+                  <button
+                    key={optIdx}
+                    type="button"
+                    onClick={() => selectOption(currentQ.id, optIdx)}
+                    className={`w-full min-h-[56px] p-4 rounded-2xl border text-left text-xs sm:text-sm font-medium transition-all flex items-center justify-between gap-3 active:scale-[0.99] touch-manipulation group ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-600/20 text-white font-bold ring-1 ring-indigo-500 shadow-xl shadow-indigo-950/60'
+                        : 'border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-white/20 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-8 h-8 shrink-0 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-500/40'
+                            : 'bg-slate-800 border border-white/10 text-slate-400 group-hover:text-white'
+                        }`}
+                      >
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span className="break-words">{optionText}</span>
                     </div>
+
+                    {isSelected && (
+                      <div className="w-6 h-6 rounded-full bg-indigo-500/30 border border-indigo-400 flex items-center justify-center text-indigo-300 shrink-0">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Navigation & Submit Controls */}
+            <div className="pt-6 border-t border-white/10 flex items-center justify-between gap-3 flex-wrap">
+              <button
+                type="button"
+                disabled={currentIndex === 0}
+                onClick={() => setCurrentIndex((prev) => prev - 1)}
+                className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white disabled:opacity-25 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-white/5 transition"
+              >
+                Previous
+              </button>
+
+              {currentIndex < questions.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setCurrentIndex((prev) => prev + 1)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2"
+                >
+                  <span>Next Question</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleSubmit}
+                  className="px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Grading Quest...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Submit & Claim XP</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </>
                   )}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Navigation & Submit Controls */}
-          <div className="pt-6 border-t border-white/10 flex items-center justify-between gap-3 flex-wrap">
-            <button
-              type="button"
-              disabled={currentIndex === 0}
-              onClick={() => setCurrentIndex((prev) => prev - 1)}
-              className="px-5 py-2.5 text-xs font-bold text-slate-400 hover:text-white disabled:opacity-25 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-white/5 transition"
-            >
-              Previous
-            </button>
-
-            {currentIndex < questions.length - 1 ? (
-              <button
-                type="button"
-                onClick={() => setCurrentIndex((prev) => prev + 1)}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2"
-              >
-                <span>Next Question</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleSubmit}
-                className="px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Grading Quest...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Submit & Claim XP</span>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </main>
