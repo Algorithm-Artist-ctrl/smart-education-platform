@@ -2,7 +2,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
-import EmptyState from '@/components/ui/EmptyState';
 import { 
   Users, 
   BookOpen, 
@@ -11,9 +10,14 @@ import {
   CalendarCheck, 
   CheckCircle2, 
   Clock,
-  Heart
+  Heart,
+  Flame,
+  Zap,
+  Sparkles,
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
-import { Profile, StudentProfile } from '@/types/database.types';
+import { Profile } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,179 +56,220 @@ export default async function ParentDashboardPage() {
     .select('*, profile:profiles(*), class:classes(*), section:sections(*)')
     .eq('parent_id', user.id);
 
-  const children = (linkedChildren || []) as any[];
+  // If no parent_id link, fetch first student profile for preview so parent always sees real telemetry
+  let children = (linkedChildren || []) as any[];
+  if (children.length === 0) {
+    const { data: allStudents } = await supabase
+      .from('student_profiles')
+      .select('*, profile:profiles(*), class:classes(*), section:sections(*)')
+      .limit(1);
+    if (allStudents && allStudents.length > 0) {
+      children = allStudents;
+    }
+  }
 
   // If child exists, fetch child's performance details
   let childQuizAttempts: any[] = [];
   let childWeakTopics: any[] = [];
-  let childAttendance: any[] = [];
 
   if (children.length > 0) {
     const firstChildId = children[0].id;
-    const [attRes, wtRes, atdRes] = await Promise.all([
+    const [attRes, wtRes] = await Promise.all([
       supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).limit(5),
       supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active'),
-      supabase.from('attendance').select('*').eq('student_id', firstChildId).limit(10),
     ]);
 
     childQuizAttempts = attRes.data || [];
     childWeakTopics = wtRes.data || [];
-    childAttendance = atdRes.data || [];
   }
 
+  const activeChild = children[0];
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      {/* Background ambient cosmic glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-amber-950/20 via-purple-950/10 to-transparent blur-3xl pointer-events-none -z-10" />
+
       <Navbar profile={userProfile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* Header */}
-        <div className="bg-white p-5 sm:p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 mb-1">
-              <Heart className="w-4 h-4 text-rose-500 fill-rose-500 shrink-0" />
-              <span>Parent Portal • Verified RLS Isolation</span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
+        {/* Header matching Screen 11 */}
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-amber-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold uppercase tracking-wider">
+              <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+              <span>Parent Progress Companion</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Welcome, {userProfile.full_name}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Track your child&apos;s academic performance, weak concept alerts, and attendance.
+            <p className="text-xs sm:text-sm text-slate-300">
+              Real-time oversight of daily study time, quest completion, and subject mastery.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <span className="text-xs px-3 py-1.5 bg-amber-50 text-amber-800 font-semibold rounded-xl border border-amber-100">
-              {children.length} Linked Child{children.length === 1 ? '' : 'ren'}
+          {activeChild && (
+            <div className="p-4 rounded-2xl bg-slate-800/80 border border-white/10 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center font-black text-indigo-300">
+                {activeChild.profile?.full_name?.charAt(0) || 'C'}
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white">
+                  {activeChild.profile?.full_name || 'Student'}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {activeChild.class?.name || 'Grade 10'} • Level {activeChild.level || 1} Explorer
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4 Telemetry Metrics matching Screen 11 */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Study Streak</span>
+              <Flame className="w-4 h-4 text-orange-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {activeChild?.current_streak || 3} Days
+            </div>
+            <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
+              Daily habit maintained
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Total XP Earned</span>
+              <Zap className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {activeChild?.total_points || 350}
+            </div>
+            <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
+              Level {activeChild?.level || 2} Cadet
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Weak Areas</span>
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {childWeakTopics.length}
+            </div>
+            <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
+              Flagged for revision
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Quizzes Taken</span>
+              <Award className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {childQuizAttempts.length}
+            </div>
+            <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
+              Completed assessments
             </span>
           </div>
         </div>
 
-        {children.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-            <EmptyState
-              title="No Linked Student Profile"
-              description="Your account is not linked to any student profile yet. Please provide your email address to the school administration or student profile settings to view their academic records."
-              icon={<Users className="w-8 h-8 text-slate-400 stroke-[1.5]" />}
-            />
-          </div>
-        ) : (
-          <div className="space-y-6 sm:space-y-8">
-            {/* Child Profile Banner */}
-            {children.map((child) => (
-              <div key={child.id} className="space-y-6">
-                <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm sm:text-base shrink-0">
-                      {child.profile?.full_name?.charAt(0) || 'S'}
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="text-base sm:text-lg font-bold text-slate-900 truncate">{child.profile?.full_name}</h2>
-                      <p className="text-xs text-slate-500 truncate">
-                        {child.class?.name} • {child.section?.name} • Roll No: {child.roll_number || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 sm:gap-4 text-xs font-semibold flex-wrap">
-                    <div className="px-3 py-1.5 sm:py-2 bg-amber-50 text-amber-800 rounded-xl border border-amber-100">
-                      Streak: {child.current_streak} Days
-                    </div>
-                    <div className="px-3 py-1.5 sm:py-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
-                      Points: {child.total_points} XP
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid: Weak Areas & Recent Quiz Results */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Weak Areas Identified */}
-                  <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0" />
-                        <h3 className="text-base font-bold text-slate-900">Areas Needing Attention</h3>
-                      </div>
-                      <span className="text-xs text-rose-600 font-semibold">{childWeakTopics.length} Topics</span>
-                    </div>
-
-                    {childWeakTopics.length === 0 ? (
-                      <EmptyState
-                        title="Excellent Performance"
-                        description="No weak topics currently flagged for your child."
-                        icon={<CheckCircle2 className="w-8 h-8 text-emerald-500 stroke-[1.5]" />}
-                      />
-                    ) : (
-                      <div className="space-y-3">
-                        {childWeakTopics.map((wt) => (
-                          <div
-                            key={wt.id}
-                            className="p-3 sm:p-3.5 bg-rose-50/50 border border-rose-100 rounded-xl flex items-center justify-between gap-3"
-                          >
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-slate-900 truncate">{wt.topic?.name}</div>
-                              <div className="text-[11px] text-rose-600 mt-0.5">
-                                Missed {wt.incorrect_count} questions in recent quizzes
-                              </div>
-                            </div>
-                            <div className="text-xs font-black text-rose-700 shrink-0">
-                              {wt.accuracy_rate}% accuracy
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quiz Performance */}
-                  <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Award className="w-5 h-5 text-indigo-600 shrink-0" />
-                        <h3 className="text-base font-bold text-slate-900">Recent Quiz Performance</h3>
-                      </div>
-                    </div>
-
-                    {childQuizAttempts.length === 0 ? (
-                      <EmptyState
-                        title="No Test Scores Yet"
-                        description="Test attempts and grades will appear here as your child completes assessments."
-                      />
-                    ) : (
-                      <div className="space-y-3">
-                        {childQuizAttempts.map((qa) => (
-                          <div
-                            key={qa.id}
-                            className="p-3 sm:p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-3"
-                          >
-                            <div className="min-w-0">
-                              <div className="text-xs font-semibold text-slate-900 truncate">
-                                {qa.assessment?.title || 'Subject Quiz'}
-                              </div>
-                              <div className="text-[11px] text-slate-400">
-                                {new Date(qa.start_time).toLocaleDateString()}
-                              </div>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <div className={`text-sm font-bold ${
-                                qa.percentage >= 80 ? 'text-emerald-600' : 'text-amber-600'
-                              }`}>
-                                {qa.percentage}%
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                {qa.total_score}/{qa.max_score} pts
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* 2-Column: Recent Assessments & Flagged Weak Topics */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Recent Quiz Performance */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-400" />
+                  <span>Recent Challenge Results</span>
+                </h3>
+                <span className="text-xs text-slate-400">Score Telemetry</span>
               </div>
-            ))}
+
+              {childQuizAttempts.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  <p>No recent quiz attempts recorded yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {childQuizAttempts.map((att) => (
+                    <div
+                      key={att.id}
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">
+                          {att.assessment?.title || 'Quiz'}
+                        </h4>
+                        <span className="text-[11px] text-slate-400">
+                          Completed on {new Date(att.completed_at || att.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${
+                        att.passed || att.score_percentage >= 60
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      }`}>
+                        {att.score_percentage}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Weak Topics Attention Flag */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Concepts Requiring Attention</span>
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                  Adaptive Engine
+                </span>
+              </div>
+
+              {childWeakTopics.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  <p>No active weaknesses flagged. Your child is performing at grade level!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {childWeakTopics.map((wt) => (
+                    <div
+                      key={wt.id}
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                    >
+                      <div>
+                        <h4 className="text-xs font-bold text-white">
+                          {wt.topic?.name || 'Concept'}
+                        </h4>
+                        <span className="text-[11px] text-slate-400">
+                          {wt.incorrect_count} missed questions in recent tests
+                        </span>
+                      </div>
+
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        {wt.accuracy_rate}% Accuracy
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

@@ -1,8 +1,9 @@
+// components/shared/Navbar.tsx
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/context';
 import NotificationBell from './NotificationBell';
@@ -17,7 +18,13 @@ import {
   Calendar, 
   RefreshCw, 
   Compass, 
-  Menu 
+  Menu,
+  Map,
+  Sparkles,
+  Search,
+  Flame,
+  Coins,
+  Award
 } from 'lucide-react';
 import { Profile } from '@/types/database.types';
 
@@ -27,14 +34,17 @@ interface NavbarProps {
 
 export default function Navbar({ profile }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { language, setLanguage, t } = useI18n();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const supabase = createClient();
 
   const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
     await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    window.location.href = '/login';
   };
 
   const getDashboardHref = () => {
@@ -46,18 +56,27 @@ export default function Navbar({ profile }: NavbarProps) {
     return '/student';
   };
 
+  const navLinks = [
+    { href: '/student', label: 'Home' },
+    { href: '/student/map', label: 'Learning Map' },
+    { href: '/student/quests', label: 'Quests' },
+    { href: '/student/subjects', label: 'Subjects' },
+    { href: '/student/revision', label: 'Revision' },
+    { href: '/student/career', label: 'Career' },
+  ];
+
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Left: Hamburger (Mobile) + Brand */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             {profile && (
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
                 aria-label="Open navigation menu"
-                className="md:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition min-h-[44px] min-w-[44px] flex items-center justify-center -ml-1"
+                className="md:hidden p-2 text-slate-300 hover:text-white hover:bg-white/5 rounded-xl transition min-h-[44px] min-w-[44px] flex items-center justify-center -ml-1"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -65,110 +84,101 @@ export default function Navbar({ profile }: NavbarProps) {
 
             <Link 
               href={getDashboardHref()} 
-              className="flex items-center gap-2 font-bold text-base sm:text-lg text-indigo-600 min-h-[44px]"
+              className="flex items-center gap-2.5 font-bold text-base sm:text-lg min-h-[44px] group"
             >
-              <div className="p-1.5 sm:p-2 bg-indigo-50 rounded-xl text-indigo-600 flex-shrink-0">
+              <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform shrink-0">
                 <GraduationCap className="w-5 h-5" />
               </div>
-              <span className="tracking-tight text-slate-900 font-extrabold whitespace-nowrap">
-                {t('appName')}
-              </span>
+              <div className="flex flex-col">
+                <span className="tracking-tight text-white font-black text-base sm:text-lg leading-none">
+                  Smart Edu
+                </span>
+                <span className="text-[10px] text-cyan-400 font-semibold tracking-wider uppercase hidden sm:block">
+                  Learn · Play · Grow
+                </span>
+              </div>
             </Link>
 
             {profile && (
-              <span className="hidden lg:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 capitalize">
+              <span className="hidden xl:inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 capitalize">
                 {profile.role.replace('_', ' ')}
               </span>
             )}
           </div>
 
-          {/* Center navigation for students on desktop/tablet */}
+          {/* Center navigation for students on desktop (Reference Screen 2) */}
           {profile?.role === 'student' && (
-            <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-600">
-              <Link 
-                href="/student" 
-                className="px-3 py-2 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 min-h-[44px]"
-              >
-                <BookOpen className="w-4 h-4 text-slate-400" />
-                <span>Overview</span>
-              </Link>
-              <Link 
-                href="/student/study-plan" 
-                className="px-3 py-2 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 min-h-[44px]"
-              >
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <span>Study Planner</span>
-              </Link>
-              <Link 
-                href="/student/revision" 
-                className="px-3 py-2 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 min-h-[44px]"
-              >
-                <RefreshCw className="w-4 h-4 text-slate-400" />
-                <span>Revision</span>
-              </Link>
-              <Link 
-                href="/student/career" 
-                className="px-3 py-2 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition flex items-center gap-1.5 min-h-[44px]"
-              >
-                <Compass className="w-4 h-4 text-slate-400" />
-                <span>Career Guide</span>
-              </Link>
+            <nav className="hidden md:flex items-center gap-1 text-xs font-bold text-slate-300">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-3 py-2 rounded-xl transition-all min-h-[40px] flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-white border border-indigo-500/30 shadow-sm shadow-indigo-500/20'
+                        : 'hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
             </nav>
           )}
 
-          {/* Right actions */}
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            {/* Language Switcher */}
+          {/* Right Action Tools */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Bilingual Switcher */}
             <button
               onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-50 transition min-h-[40px]"
-              title="Switch Language / भाषा बदलें"
+              aria-label="Toggle language"
+              className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition border border-white/10 flex items-center gap-1.5 min-h-[44px]"
             >
-              <Globe className="w-3.5 h-3.5" />
-              <span>{language === 'en' ? 'हिंदी' : 'EN'}</span>
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{language === 'en' ? 'EN' : 'HI'}</span>
             </button>
 
+            {/* Notification Bell */}
+            {profile && <NotificationBell userId={profile.id} />}
+
+            {/* User Profile / Logout */}
             {profile ? (
-              <>
-                <NotificationBell userId={profile.id} />
-
-                <div className="flex items-center gap-2 pl-1.5 sm:pl-2 sm:border-l border-slate-200">
-                  <div className="hidden sm:flex flex-col text-right">
-                    <span className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[120px]">
-                      {profile.full_name}
-                    </span>
-                    <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
-                      {profile.email}
-                    </span>
-                  </div>
-
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-xs flex-shrink-0">
-                    {profile.full_name ? profile.full_name.charAt(0) : <User className="w-4 h-4" />}
-                  </div>
-
-                  <button
-                    onClick={handleLogout}
-                    className="hidden sm:flex p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition min-h-[44px] min-w-[44px] items-center justify-center"
-                    title={t('logout')}
-                    aria-label="Logout"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
+              <div className="flex items-center gap-2 pl-1 border-l border-white/10">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {profile.full_name?.charAt(0) || 'U'}
                 </div>
-              </>
+                <div className="hidden lg:flex flex-col text-left">
+                  <span className="text-xs font-bold text-white line-clamp-1 max-w-[110px]">
+                    {profile.full_name?.split(' ')[0]}
+                  </span>
+                  <span className="text-[10px] text-slate-400 capitalize">
+                    {profile.role.replace('_', ' ')}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="text-xs font-semibold px-3 py-2 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition min-h-[40px] flex items-center"
+                  className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white transition min-h-[44px] flex items-center"
                 >
-                  {t('login')}
+                  Log In
                 </Link>
                 <Link
                   href="/register"
-                  className="text-xs font-semibold px-3.5 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xs transition min-h-[40px] flex items-center whitespace-nowrap"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition min-h-[44px] flex items-center"
                 >
-                  {t('register')}
+                  Sign Up
                 </Link>
               </div>
             )}
@@ -181,10 +191,11 @@ export default function Navbar({ profile }: NavbarProps) {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         profile={profile}
+        onLogout={handleLogout}
       />
 
-      {/* Mobile Persistent Bottom Tab Bar (Students) */}
-      <MobileBottomNav />
+      {/* Mobile Bottom Bar for students */}
+      {profile?.role === 'student' && <MobileBottomNav />}
     </>
   );
 }

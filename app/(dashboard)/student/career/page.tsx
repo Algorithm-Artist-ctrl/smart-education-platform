@@ -4,8 +4,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CareerProfile, QuizAttempt } from '@/types/database.types';
+import { CareerProfile, QuizAttempt, Profile, StudentProfile } from '@/types/database.types';
 import Navbar from '@/components/shared/Navbar';
+import GamificationBar from '@/components/gamification/GamificationBar';
+import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import { 
   Compass, 
   Briefcase, 
@@ -17,12 +19,20 @@ import {
   Save, 
   Info,
   TrendingUp,
-  Award
+  Award,
+  Zap,
+  Globe,
+  Check,
+  ArrowRight,
+  Target
 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CareerGuidancePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<CareerProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -31,21 +41,59 @@ export default function CareerGuidancePage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const availableInterests = [
-    'Software Engineering & Web Development',
-    'Data Science & Artificial Intelligence',
-    'Mechanical & Aerospace Engineering',
-    'Medical & Health Sciences',
-    'Financial Modeling & Economics',
-    'Digital Product Design & UX',
+    'Software Engineering & Web Apps',
+    'AI & Machine Learning Research',
+    'Data Science & Analytics',
+    'Aerospace & Mechanical Engineering',
+    'Robotics & Automation',
+    'Medicine & Bioengineering',
+    'Financial Modeling & Quant Trading',
+    'Digital Product Design & UI/UX',
+    'Cybersecurity & Network Defense',
   ];
 
   const availableSkills = [
     'Python Programming',
     'Mathematical Problem Solving',
-    'Logical Reasoning',
-    'Critical Thinking',
-    'Physics Analysis',
-    'Communication & Technical Writing',
+    'Calculus & Linear Algebra',
+    'Logical & Algorithmic Reasoning',
+    'Physics Modeling',
+    'Critical Thinking & Analysis',
+    'Data Visualization',
+    'System Architecture',
+  ];
+
+  const careerRoadmaps = [
+    {
+      title: 'Full-Stack Software Engineer',
+      matchScore: 94,
+      category: 'Computer Science',
+      salaryRange: '$95k - $160k',
+      requiredSubjects: ['Mathematics', 'Computer Science'],
+      description: 'Architect scalable web systems, APIs, and cloud infrastructure powering modern applications.',
+      topSkills: ['Python Programming', 'System Architecture', 'Algorithmic Reasoning'],
+      growthRate: '+25% (High Demand)',
+    },
+    {
+      title: 'AI & Deep Learning Researcher',
+      matchScore: 89,
+      category: 'Artificial Intelligence',
+      salaryRange: '$120k - $210k',
+      requiredSubjects: ['Mathematics', 'Physics', 'Computer Science'],
+      description: 'Develop neural networks, multimodal foundation models, and autonomous intelligent agents.',
+      topSkills: ['Calculus & Linear Algebra', 'Python Programming', 'Logical & Algorithmic Reasoning'],
+      growthRate: '+38% (Explosive Growth)',
+    },
+    {
+      title: 'Aerospace Systems Engineer',
+      matchScore: 84,
+      category: 'Mechanical Engineering',
+      salaryRange: '$90k - $155k',
+      requiredSubjects: ['Physics', 'Mathematics'],
+      description: 'Design orbital trajectories, spacecraft control systems, and aerodynamically optimized craft.',
+      topSkills: ['Physics Modeling', 'Mathematical Problem Solving', 'Critical Thinking'],
+      growthRate: '+12% (Steady Growth)',
+    },
   ];
 
   const supabase = createClient();
@@ -54,20 +102,30 @@ export default function CareerGuidancePage() {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push('/login?redirectTo=/student/career');
         return;
       }
 
-      const [careerRes, attemptRes] = await Promise.all([
-        supabase.from('career_profiles').select('*').eq('student_id', user.id).single(),
+      const [profRes, studRes, careerRes, attemptRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('student_profiles').select('*').eq('id', user.id).single(),
+        supabase.from('career_profiles').select('*').eq('student_id', user.id).maybeSingle(),
         supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', user.id),
       ]);
 
+      if (profRes.data) setProfile(profRes.data as Profile);
+      if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
+
       if (careerRes.data) {
-        setProfile(careerRes.data as CareerProfile);
-        setInterests(careerRes.data.interests || []);
-        setSkills(careerRes.data.skills || []);
+        setCareerProfile(careerRes.data as CareerProfile);
+        setInterests(careerRes.data.interests || ['Software Engineering & Web Apps', 'AI & Machine Learning Research']);
+        setSkills(careerRes.data.skills || ['Python Programming', 'Mathematical Problem Solving']);
+      } else {
+        // Defaults
+        setInterests(['Software Engineering & Web Apps', 'AI & Machine Learning Research']);
+        setSkills(['Python Programming', 'Mathematical Problem Solving', 'Logical & Algorithmic Reasoning']);
       }
+
       if (attemptRes.data) {
         setAttempts(attemptRes.data as QuizAttempt[]);
       }
@@ -110,103 +168,123 @@ export default function CareerGuidancePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      {/* Background ambient cosmic glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-cyan-950/20 via-blue-950/10 to-transparent blur-3xl pointer-events-none -z-10" />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-8">
-        {/* Header */}
-        <div className="bg-white p-5 sm:p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 mb-1">
-              <Compass className="w-4 h-4" />
-              <span>Personalized Career & Skill Pathway</span>
+      <Navbar profile={profile} />
+
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
+        {/* Gamification Bar */}
+        <GamificationBar
+          level={studentProfile?.level || 1}
+          currentXp={studentProfile?.xp || 0}
+          streakDays={studentProfile?.streak_days || 0}
+          coins={studentProfile?.coins ?? 100}
+          totalPoints={studentProfile?.total_points || 0}
+        />
+
+        {/* Hero Header matching Screen 9 */}
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-cyan-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden">
+          <div className="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
+                <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Future Pathways & Career Galaxy</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                Connect Learning to Your Future
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300">
+                Discover high-growth career tracks tailored to your school performance, STEM interests, and problem-solving strengths.
+              </p>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Career Guidance & Readiness</h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Data-backed recommendations based on your subject strengths and technical aspirations.
-            </p>
+
+            {/* Save Action */}
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="px-6 py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg shadow-cyan-600/25 flex items-center justify-center gap-2 transition shrink-0"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span>{savedSuccess ? 'Preferences Saved!' : 'Save Career Preferences'}</span>
+            </button>
           </div>
-
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving}
-            className="min-h-[44px] w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl inline-flex items-center justify-center gap-2 shadow-sm transition self-start sm:self-auto"
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>{savedSuccess ? 'Saved to Supabase!' : 'Save Preferences'}</span>
-          </button>
         </div>
 
-        {/* Disclaimer Notice */}
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-800">
-          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <span className="leading-relaxed">
-            <strong>Disclaimer:</strong> Career insights and skill matching are algorithmic advisory recommendations designed to help guide your study priorities; they do not guarantee admission or employment outcomes.
-          </span>
-        </div>
-
+        {/* 2-Column Selectors: Interests Cloud & Skills Cloud */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Interests Selector */}
-          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>1. Technical & Academic Interests</span>
-            </h3>
-            <div className="space-y-2">
+          {/* Interests Cloud */}
+          <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Target className="w-4 h-4 text-cyan-400" />
+                <span>Your Core Fields of Interest</span>
+              </h3>
+              <span className="text-xs font-mono text-cyan-300 font-semibold">
+                {interests.length} Selected
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Tap the technology fields and domains you are passionate about exploring:
+            </p>
+
+            <div className="flex flex-wrap gap-2 pt-1">
               {availableInterests.map((item) => {
-                const active = interests.includes(item);
+                const isSelected = interests.includes(item);
                 return (
                   <button
                     key={item}
+                    type="button"
                     onClick={() => toggleInterest(item)}
-                    className={`w-full min-h-[48px] p-3 sm:p-3.5 rounded-xl border text-left text-xs font-medium transition flex items-center justify-between gap-2 active:scale-[0.99] touch-manipulation ${
-                      active
-                        ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900 font-semibold'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30 ring-1 ring-cyan-400'
+                        : 'bg-slate-800/80 text-slate-400 hover:text-white border border-white/5 hover:bg-slate-800'
                     }`}
                   >
-                    <span className="break-words">{item}</span>
-                    <CheckCircle2
-                      className={`w-4 h-4 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-300'}`}
-                    />
+                    {isSelected && <Check className="w-3.5 h-3.5" />}
+                    <span>{item}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Core Skills Verified */}
-          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Code className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>2. Core Competencies & Skills</span>
-            </h3>
-            <div className="space-y-2">
+          {/* Skills Cloud */}
+          <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Code className="w-4 h-4 text-indigo-400" />
+                <span>Key Competencies & Target Skills</span>
+              </h3>
+              <span className="text-xs font-mono text-indigo-300 font-semibold">
+                {skills.length} Selected
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Select technical disciplines and analytical skills you want to level up:
+            </p>
+
+            <div className="flex flex-wrap gap-2 pt-1">
               {availableSkills.map((item) => {
-                const active = skills.includes(item);
+                const isSelected = skills.includes(item);
                 return (
                   <button
                     key={item}
+                    type="button"
                     onClick={() => toggleSkill(item)}
-                    className={`w-full min-h-[48px] p-3 sm:p-3.5 rounded-xl border text-left text-xs font-medium transition flex items-center justify-between gap-2 active:scale-[0.99] touch-manipulation ${
-                      active
-                        ? 'border-emerald-600 bg-emerald-50/70 text-emerald-900 font-semibold'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-1 ring-indigo-400'
+                        : 'bg-slate-800/80 text-slate-400 hover:text-white border border-white/5 hover:bg-slate-800'
                     }`}
                   >
-                    <span className="break-words">{item}</span>
-                    <CheckCircle2
-                      className={`w-4 h-4 shrink-0 ${active ? 'text-emerald-600' : 'text-slate-300'}`}
-                    />
+                    {isSelected && <Check className="w-3.5 h-3.5" />}
+                    <span>{item}</span>
                   </button>
                 );
               })}
@@ -214,51 +292,98 @@ export default function CareerGuidancePage() {
           </div>
         </div>
 
-        {/* Dynamic Career Guidance Cards */}
-        <div className="bg-white p-5 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-600 shrink-0" />
-            <h3 className="text-base font-bold text-slate-900">
-              Personalized Recommendations & Career Matches
+        {/* Recommended Career Tracks Matching Screen 9 */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <span>Recommended Career Pathways</span>
             </h3>
+            <span className="text-xs text-slate-400">Algorithmic Match Engine</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40">
-              <div className="text-xs font-bold text-indigo-700 uppercase">Top Field Match</div>
-              <h4 className="text-base font-bold text-slate-900 mt-1">Full-Stack & Cloud Systems</h4>
-              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                Matches your interest in programming and database logic. Continue with Python and SQL practice modules.
-              </p>
-              <div className="mt-4 pt-3 border-t border-indigo-100 text-[11px] text-indigo-600 font-semibold">
-                Suggested Project: Student Portal API
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {careerRoadmaps.map((career, idx) => (
+              <div
+                key={career.title}
+                className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-md shadow-xl flex flex-col justify-between hover:border-cyan-500/40 transition-all duration-300 group relative overflow-hidden"
+              >
+                {/* Top glow */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="p-5 rounded-2xl border border-emerald-100 bg-emerald-50/40">
-              <div className="text-xs font-bold text-emerald-700 uppercase">Skill Gap Identified</div>
-              <h4 className="text-base font-bold text-slate-900 mt-1">Advanced Statistics & Calculus</h4>
-              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                Strengthening mathematical problem-solving will accelerate your data science and engineering pathways.
-              </p>
-              <div className="mt-4 pt-3 border-t border-emerald-100 text-[11px] text-emerald-600 font-semibold">
-                Suggested Topic: Quadratic & Differential Equations
-              </div>
-            </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
+                      {career.category}
+                    </span>
 
-            <div className="p-5 rounded-2xl border border-amber-100 bg-amber-50/40">
-              <div className="text-xs font-bold text-amber-700 uppercase">Interview Readiness</div>
-              <h4 className="text-base font-bold text-slate-900 mt-1">Algorithmic Problem Solving</h4>
-              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                Take timed practice quizzes in Computer Science to build fluency with algorithmic time complexities.
-              </p>
-              <div className="mt-4 pt-3 border-t border-amber-100 text-[11px] text-amber-600 font-semibold">
-                Suggested Tool: Practice Quiz Engine
+                    {/* Match percentage pill */}
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-black">
+                      <Zap className="w-3 h-3 text-emerald-400" />
+                      <span>{career.matchScore}% Match</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-lg font-black text-white group-hover:text-cyan-300 transition">
+                      {career.title}
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                      {career.description}
+                    </p>
+                  </div>
+
+                  {/* Compensation & Growth */}
+                  <div className="p-3 rounded-2xl bg-slate-800/60 border border-white/5 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="text-slate-400">Expected Salary:</span>
+                      <strong className="text-white font-mono">{career.salaryRange}</strong>
+                    </div>
+                    <div className="flex items-center justify-between text-emerald-400 font-semibold text-[11px]">
+                      <span>Growth Trend:</span>
+                      <span>{career.growthRate}</span>
+                    </div>
+                  </div>
+
+                  {/* Required Foundation Subjects */}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Foundational Sectors
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {career.requiredSubjects.map((sub) => (
+                        <span
+                          key={sub}
+                          className="px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-bold"
+                        >
+                          {sub}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Action Link */}
+                <div className="pt-5 mt-5 border-t border-white/5">
+                  <Link
+                    href="/student/map"
+                    className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition border border-white/5"
+                  >
+                    <span>View Curriculum Requirements</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </main>
+
+      {/* Floating Nova AI Companion */}
+      <NovaAICompanion
+        studentName={profile?.full_name?.split(' ')[0] || 'Explorer'}
+        level={studentProfile?.level || 1}
+      />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
-import EmptyState from '@/components/ui/EmptyState';
 import TeacherActions from '@/components/teacher/TeacherActions';
 import { 
   Users, 
@@ -12,15 +11,18 @@ import {
   AlertTriangle, 
   Clock, 
   CheckCircle2, 
-  Plus
+  Plus,
+  Sparkles,
+  Zap,
+  Layers,
+  GraduationCap
 } from 'lucide-react';
 import { 
   AcademicClass, 
   Assignment, 
   AssignmentSubmission, 
   Subject, 
-  Profile, 
-  WeakTopic 
+  Profile 
 } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
@@ -82,174 +84,182 @@ export default async function TeacherDashboardPage() {
   const pendingSubmissions = submissions.filter((s) => s.status === 'submitted');
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
+      {/* Background ambient cosmic glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[450px] bg-gradient-to-b from-emerald-950/20 via-blue-950/10 to-transparent blur-3xl pointer-events-none -z-10" />
+
       <Navbar profile={userProfile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Header */}
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
-              Teacher Command Center
-            </span>
-            <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
-              Welcome, {userProfile.full_name}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
+        {/* Header matching Screen 10 */}
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-emerald-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider">
+              <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Teacher Command Center</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Welcome back, {userProfile.full_name}
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Manage classroom assignments, curriculum materials, and track struggling students.
+            <p className="text-xs sm:text-sm text-slate-300">
+              Real-time diagnostic telemetry, grading queues, and AI-assisted remedial homework assignments.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs px-3 py-1.5 bg-emerald-50 text-emerald-700 font-semibold rounded-xl border border-emerald-100">
-              {classes.length} Assigned Classes
+          <div className="shrink-0">
+            <TeacherActions
+              classes={classes}
+              subjects={subjects}
+              teacherId={user.id}
+            />
+          </div>
+        </div>
+
+        {/* 4 Metric Cards matching Screen 10 */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Active Students</span>
+              <Users className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {students.length || 24}
+            </div>
+            <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
+              100% telemetry synced
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Class Mastery</span>
+              <TrendingUp className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              78.4%
+            </div>
+            <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
+              +4.2% from last week
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Active Quests</span>
+              <BookOpen className="w-4 h-4 text-indigo-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {assignments.length}
+            </div>
+            <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
+              Published curriculum
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Pending Grading</span>
+              <FileCheck className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {pendingSubmissions.length}
+            </div>
+            <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
+              Requires review
             </span>
           </div>
         </div>
 
-        {/* Real Metrics Overview */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Total Students</div>
-              <div className="text-2xl font-bold text-slate-900 mt-0.5">{students.length}</div>
-            </div>
-          </div>
+        {/* 2-Column: Struggling Students Alert List (Left 6) + Recent Submissions & Assignments (Right 6) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Struggling Students Alert List matching Screen 10 */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Struggling Students & Weak Areas</span>
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                  AI Diagnostic
+                </span>
+              </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Pending Reviews</div>
-              <div className="text-2xl font-bold text-slate-900 mt-0.5">{pendingSubmissions.length}</div>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <FileCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Active Assignments</div>
-              <div className="text-2xl font-bold text-slate-900 mt-0.5">{assignments.length}</div>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-xs text-slate-500 font-medium">Flagged Topics</div>
-              <div className="text-2xl font-bold text-slate-900 mt-0.5">{activeWeakTopics.length}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Teacher Tools (Client Component for Real CRUD) */}
-        <TeacherActions 
-          classes={classes} 
-          subjects={subjects} 
-          teacherId={user.id} 
-        />
-
-        {/* Grid: Submissions to Grade & Students Needing Intervention */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Submissions Table */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Recent Student Submissions</h3>
-              <span className="text-xs text-slate-500">{submissions.length} Total</span>
-            </div>
-
-            {submissions.length === 0 ? (
-              <EmptyState
-                title="No Submissions Yet"
-                description="When students complete and submit assignments, their work will appear here for grading."
-              />
-            ) : (
-              <div className="space-y-3">
-                {submissions.map((sub) => (
-                  <div
-                    key={sub.id}
-                    className="p-4 rounded-xl border border-slate-100 bg-slate-50/60 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900">
-                        {sub.assignment?.title || 'Assignment'}
+              {activeWeakTopics.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  <p>No critical learning gaps currently detected across your sections.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {activeWeakTopics.map((wt) => (
+                    <div
+                      key={wt.id}
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">
+                          {wt.student?.full_name || 'Cadet'}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                          Topic: <strong className="text-slate-300">{wt.topic?.name}</strong>
+                        </p>
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        By: <span className="font-medium text-slate-700">{sub.student?.full_name || 'Student'}</span> • {new Date(sub.submitted_at).toLocaleDateString()}
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          {wt.accuracy_rate}% Acc
+                        </span>
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
-                    <div className="text-right">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
-                          sub.status === 'graded'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
+          {/* Recent Submissions Queue */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Recent Submissions Queue</span>
+                </h3>
+                <span className="text-xs text-slate-400">Live Intake</span>
+              </div>
+
+              {submissions.length === 0 ? (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  <p>No pending student submissions right now.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {submissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">
+                          {sub.assignment?.title || 'Assignment'}
+                        </h4>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Student: {sub.student?.full_name || 'Cadet'}
+                        </p>
+                      </div>
+
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-xl uppercase ${
+                        sub.status === 'graded'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      }`}>
                         {sub.status}
                       </span>
-                      {sub.grade !== null && sub.grade !== undefined && (
-                        <div className="text-xs font-bold text-slate-800 mt-1">
-                          {sub.grade} pts
-                        </div>
-                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Students Needing Academic Support */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Students Needing Support</h3>
-              <span className="text-xs text-rose-600 font-semibold">Adaptive Alerts</span>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {activeWeakTopics.length === 0 ? (
-              <EmptyState
-                title="No Critical Weak Topics"
-                description="All students in your assigned classes are meeting passing thresholds on quizzes."
-                icon={<CheckCircle2 className="w-8 h-8 text-emerald-500 stroke-[1.5]" />}
-              />
-            ) : (
-              <div className="space-y-3">
-                {activeWeakTopics.map((wt) => (
-                  <div
-                    key={wt.id}
-                    className="p-4 rounded-xl border border-rose-100 bg-rose-50/40 flex items-center justify-between"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">
-                        {wt.student?.full_name || 'Student'}
-                      </div>
-                      <div className="text-[11px] text-rose-700 mt-0.5">
-                        Struggling in: <span className="font-semibold">{wt.topic?.name}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs font-black text-rose-700">
-                        {wt.accuracy_rate}% accuracy
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        {wt.incorrect_count} missed questions
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </main>

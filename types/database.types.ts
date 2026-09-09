@@ -21,8 +21,11 @@ export interface StudentProfile {
   parent_id?: string | null;
   learning_goals: string[];
   current_streak: number;
+  streak_days?: number;
   total_points: number;
+  xp?: number;
   level: number;
+  coins?: number;
   onboarding_completed: boolean;
   created_at: string;
   updated_at: string;
@@ -30,6 +33,28 @@ export interface StudentProfile {
   profile?: Profile;
   class?: AcademicClass;
   section?: Section;
+}
+
+export interface Quest {
+  id: string;
+  student_id?: string;
+  title: string;
+  description?: string | null;
+  subject_name?: string | null;
+  duration_minutes?: number;
+  xp_reward: number;
+  coin_reward?: number;
+  coins_reward?: number;
+  progress_percent?: number;
+  progress_current?: number;
+  progress_total?: number;
+  is_completed?: boolean;
+  is_claimed?: boolean;
+  status?: 'available' | 'in_progress' | 'completed' | 'locked';
+  quest_type?: string;
+  target_id?: string | null;
+  created_at?: string;
+  completed_at?: string | null;
 }
 
 export interface Institution {
