@@ -32,7 +32,6 @@ CREATE OR REPLACE FUNCTION public.get_my_role()
 RETURNS public.user_role AS $$
     SELECT role FROM public.profiles WHERE id = auth.uid();
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 -- 6. Institutions
 CREATE TABLE IF NOT EXISTS public.institutions (
@@ -91,6 +90,7 @@ CREATE TABLE IF NOT EXISTS public.student_profiles (
     level INT DEFAULT 1,
     onboarding_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- Automatic profile creation on auth.users insert

@@ -8,17 +8,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPassword = process.env.DB_PASSWORD || process.argv[2];
-
-if (!dbPassword) {
-  console.error('Usage: node scripts/apply-migrations-direct.mjs <db_password>');
-  console.error('Or set DB_PASSWORD environment variable.');
-  process.exit(1);
-}
-
-const projectRef = 'gzejdomnlxlxkhzhxwnc';
-const poolerHost = 'aws-0-ap-southeast-1.pooler.supabase.com';
-const poolerPort = 5432; // Session mode for DDL statements
+const dbPassword = process.env.DB_PASSWORD || process.argv[2] || 'Tarun@759977';
+const projectRef = 'rsktgmqhlhpnoosmfgvz';
+const poolerHost = process.env.SUPABASE_DB_HOST || 'aws-0-ap-northeast-2.pooler.supabase.com';
+const poolerPort = 5432; // Session mode for DDL execution
 
 console.log('===============================================================');
 console.log('  SMART EDUCATION — DIRECT POSTGRESQL MIGRATION RUNNER');
@@ -33,7 +26,7 @@ const client = new Client({
   port: poolerPort,
   database: 'postgres',
   ssl: { rejectUnauthorized: false },
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 15000,
 });
 
 async function runMigration() {
@@ -45,23 +38,38 @@ async function runMigration() {
     console.log(`Reading SQL file: ${sqlPath}...`);
     const sql = fs.readFileSync(sqlPath, 'utf8');
 
-    console.log('Executing migration script (this may take 5-10 seconds)...');
+    console.log('Executing full schema & seed migration (this may take 5-15 seconds)...');
     const startTime = Date.now();
     await client.query(sql);
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
-    console.log(`✅ All migrations, schema, RLS, triggers & seed data applied successfully in ${duration}s!`);
+    console.log(`\n🎉 ALL MIGRATIONS, TABLES, RLS POLICIES, TRIGGERS & SEED DATA APPLIED in ${duration}s!`);
 
-    // Verify table count
+    // Verify tables
     const tableRes = await client.query(`
-      SELECT count(*) as count 
+      SELECT table_name 
       FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name;
     `);
-    console.log(`\nVerified: ${tableRes.rows[0].count} tables now active in public schema!`);
+
+    console.log(`\nVerified: ${tableRes.rows.length} tables now present in public schema:`);
+    tableRes.rows.forEach((r, i) => console.log(`  ${i + 1}. ${r.table_name}`));
+
+    // Verify row counts of key tables
+    const countRes = await client.query(`
+      SELECT 
+        (SELECT count(*) FROM public.subjects) as subjects_count,
+        (SELECT count(*) FROM public.topics) as topics_count,
+        (SELECT count(*) FROM public.assessments) as assessments_count,
+        (SELECT count(*) FROM public.questions) as questions_count,
+        (SELECT count(*) FROM public.gamification_badges) as badges_count;
+    `);
+    console.log('\nSeed Data Verification:');
+    console.log(countRes.rows[0]);
 
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    console.error('❌ Migration execution failed:', err);
     process.exit(1);
   } finally {
     await client.end();
