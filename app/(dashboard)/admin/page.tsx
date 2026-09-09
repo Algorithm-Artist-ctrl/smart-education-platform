@@ -29,11 +29,22 @@ export default async function AdminDashboardPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+  const role = profile?.role || (user.user_metadata?.role as string) || 'admin';
+
+  if (role !== 'admin' && role !== 'super_admin') {
     redirect('/student');
   }
+
+  const userProfile: Profile = profile || {
+    id: user.id,
+    email: user.email || '',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Admin',
+    role: role as any,
+    created_at: user.created_at,
+    updated_at: user.created_at,
+  };
 
   // Fetch real platform/institution data
   const [
@@ -62,7 +73,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar profile={profile} />
+      <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header */}
@@ -82,7 +93,7 @@ export default async function AdminDashboardPage() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 font-semibold rounded-xl border border-indigo-100">
-              {profile.role.toUpperCase()}
+              {userProfile.role.toUpperCase()}
             </span>
           </div>
         </div>

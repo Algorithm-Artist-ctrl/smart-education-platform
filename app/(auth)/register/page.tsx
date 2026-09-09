@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -26,41 +27,82 @@ export default function RegisterPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    // Validation
+    if (!fullName.trim()) {
+      setErrorMsg('Please enter your full name.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify and try again.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
             role: role,
           },
         },
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        if (error.message.toLowerCase().includes('already registered')) {
+          setErrorMsg('An account with this email already exists. Please sign in.');
+        } else {
+          setErrorMsg(error.message);
+        }
         setLoading(false);
         return;
       }
 
-      if (data.user) {
+      // Check if user already exists (identities empty in Supabase when email confirmation is active)
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setErrorMsg('An account with this email already exists. Please sign in instead.');
+        setLoading(false);
+        return;
+      }
+
+      if (data.session) {
+        // Immediate session granted (email confirmation disabled or auto-confirmed)
         if (role === 'student') {
           router.push('/onboarding');
         } else if (role === 'teacher') {
           router.push('/teacher');
         } else if (role === 'parent') {
           router.push('/parent');
+        } else if (role === 'admin') {
+          router.push('/admin');
+        } else if (role === 'super_admin') {
+          router.push('/super-admin');
         } else {
           router.push('/student');
         }
         router.refresh();
+      } else if (data.user) {
+        // Email confirmation required by Supabase auth configuration
+        setSuccessMsg(
+          'Registration successful! Please check your email inbox to confirm your account before logging in.'
+        );
+        setLoading(false);
       } else {
-        setSuccessMsg('Registration successful! Please check your email inbox to verify your account.');
+        setSuccessMsg('Registration request received. Please check your email to complete verification.');
         setLoading(false);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'An unexpected error occurred.');
+      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
       setLoading(false);
     }
   };
@@ -138,6 +180,21 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
               />
             </div>

@@ -29,11 +29,22 @@ export default async function ParentDashboardPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.role !== 'parent' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+  const role = profile?.role || (user.user_metadata?.role as string) || 'parent';
+
+  if (role !== 'parent' && role !== 'admin' && role !== 'super_admin') {
     redirect('/student');
   }
+
+  const userProfile: Profile = profile || {
+    id: user.id,
+    email: user.email || '',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Parent',
+    role: role as any,
+    created_at: user.created_at,
+    updated_at: user.created_at,
+  };
 
   // Fetch authorized linked children through RLS
   const { data: linkedChildren } = await supabase
@@ -63,7 +74,7 @@ export default async function ParentDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar profile={profile} />
+      <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Header */}
@@ -74,7 +85,7 @@ export default async function ParentDashboardPage() {
               <span>Parent Portal • Verified RLS Isolation</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Welcome, {profile?.full_name || 'Parent'}
+              Welcome, {userProfile.full_name}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Track your child&apos;s academic performance, weak concept alerts, and attendance.

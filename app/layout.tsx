@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { I18nProvider } from '@/lib/i18n/context';
+import { AuthProvider } from '@/lib/auth/context';
 import OfflineSyncBanner from '@/components/shared/OfflineSyncBanner';
 
 export const viewport: Viewport = {
@@ -32,10 +33,13 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="antialiased min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
         <I18nProvider>
-          <OfflineSyncBanner />
-          {children}
+          <AuthProvider>
+            <OfflineSyncBanner />
+            {children}
+          </AuthProvider>
         </I18nProvider>
       </body>
     </html>
   );
 }
+

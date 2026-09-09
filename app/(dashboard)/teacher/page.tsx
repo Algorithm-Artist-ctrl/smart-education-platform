@@ -38,11 +38,22 @@ export default async function TeacherDashboardPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.role !== 'teacher' && profile?.role !== 'admin' && profile?.role !== 'super_admin') {
+  const role = profile?.role || (user.user_metadata?.role as string) || 'teacher';
+
+  if (role !== 'teacher' && role !== 'admin' && role !== 'super_admin') {
     redirect('/student');
   }
+
+  const userProfile: Profile = profile || {
+    id: user.id,
+    email: user.email || '',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Teacher',
+    role: role as any,
+    created_at: user.created_at,
+    updated_at: user.created_at,
+  };
 
   // Fetch real teacher data
   const [
@@ -72,7 +83,7 @@ export default async function TeacherDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar profile={profile} />
+      <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header */}
@@ -82,7 +93,7 @@ export default async function TeacherDashboardPage() {
               Teacher Command Center
             </span>
             <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
-              Welcome, {profile?.full_name || 'Teacher'}
+              Welcome, {userProfile.full_name}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
               Manage classroom assignments, curriculum materials, and track struggling students.

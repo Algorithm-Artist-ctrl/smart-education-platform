@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
 import EmptyState from '@/components/ui/EmptyState';
 import { ShieldCheck, Server, Key, Database, Activity, FileText } from 'lucide-react';
+import { Profile } from '@/types/database.types';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,11 +20,22 @@ export default async function SuperAdminDashboardPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.role !== 'super_admin') {
+  const role = profile?.role || (user.user_metadata?.role as string) || 'super_admin';
+
+  if (role !== 'super_admin') {
     redirect('/student');
   }
+
+  const userProfile: Profile = profile || {
+    id: user.id,
+    email: user.email || '',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Super Admin',
+    role: 'super_admin',
+    created_at: user.created_at,
+    updated_at: user.created_at,
+  };
 
   const [institutionsRes, auditLogsRes, profilesRes] = await Promise.all([
     supabase.from('institutions').select('*'),
@@ -37,7 +49,7 @@ export default async function SuperAdminDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar profile={profile} />
+      <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Header */}

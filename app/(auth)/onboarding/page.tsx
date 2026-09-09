@@ -4,14 +4,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/context';
 import { AcademicClass, Section, Subject } from '@/types/database.types';
-import { GraduationCap, ArrowRight, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { GraduationCap, ArrowRight, CheckCircle2, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { refreshProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Database options
   const [classes, setClasses] = useState<AcademicClass[]>([]);
@@ -39,11 +42,39 @@ export default function OnboardingPage() {
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        router.push('/login?redirectTo=/onboarding');
         return;
       }
 
-      // Load classes, sections, subjects
+      // 1. Verify user profile and role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && profile.role !== 'student') {
+        if (profile.role === 'teacher') router.push('/teacher');
+        else if (profile.role === 'parent') router.push('/parent');
+        else if (profile.role === 'admin') router.push('/admin');
+        else if (profile.role === 'super_admin') router.push('/super-admin');
+        else router.push('/student');
+        return;
+      }
+
+      // 2. Check if student has already finished onboarding
+      const { data: sp } = await supabase
+        .from('student_profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (sp && sp.onboarding_completed) {
+        router.push('/student');
+        return;
+      }
+
+      // 3. Load classes, sections, subjects
       const [clsRes, secRes, subRes] = await Promise.all([
         supabase.from('classes').select('*').order('grade_level', { ascending: true }),
         supabase.from('sections').select('*'),
@@ -77,42 +108,61 @@ export default function OnboardingPage() {
 
   const handleFinishOnboarding = async () => {
     setSaving(true);
+    setErrorMsg(null);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     try {
+      const classId = selectedClass && selectedClass.trim() !== '' ? selectedClass.trim() : null;
+      const sectionId = selectedSection && selectedSection.trim() !== '' ? selectedSection.trim() : null;
+      const roll = rollNumber && rollNumber.trim() !== '' ? rollNumber.trim() : null;
+
       // Update student profile in Supabase
-      const { error } = await supabase
+      const { error: spError } = await supabase
         .from('student_profiles')
         .upsert({
           id: user.id,
-          class_id: selectedClass || null,
-          section_id: selectedSection || null,
-          roll_number: rollNumber || null,
+          class_id: classId,
+          section_id: sectionId,
+          roll_number: roll,
           learning_goals: selectedGoals,
           onboarding_completed: true,
           updated_at: new Date().toISOString(),
         });
 
-      if (error) {
-        console.error('Failed to update student profile:', error);
+      if (spError) {
+        console.error('Failed to update student profile:', spError);
+        setErrorMsg(spError.message || 'Failed to complete onboarding. Please try again.');
+        setSaving(false);
+        return;
       }
 
-      // Initialize default study plan item for today
-      await supabase.from('study_plans').insert({
-        student_id: user.id,
-        plan_date: new Date().toISOString().split('T')[0],
-        title: 'Take Initial Diagnostic Assessment',
-        description: 'Complete baseline subject evaluations to tailor your personalized study plan.',
-        duration_minutes: 20,
-        priority: 'high',
-        status: 'pending',
-      });
+      // Initialize default study plan item for today (non-blocking)
+      try {
+        await supabase.from('study_plans').insert({
+          student_id: user.id,
+          plan_date: new Date().toISOString().split('T')[0],
+          title: 'Take Initial Diagnostic Assessment',
+          description: 'Complete baseline subject evaluations to tailor your personalized study plan.',
+          duration_minutes: 20,
+          priority: 'high',
+          status: 'pending',
+        });
+      } catch (e) {
+        console.warn('Initial study plan item could not be created:', e);
+      }
+
+      // Synchronize client auth state
+      await refreshProfile();
 
       router.push('/student');
       router.refresh();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
       setSaving(false);
     }
   };
@@ -139,6 +189,12 @@ export default function OnboardingPage() {
         </div>
 
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+          {errorMsg && (
+            <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
           {step === 1 && (
             <div className="space-y-5">
               <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">

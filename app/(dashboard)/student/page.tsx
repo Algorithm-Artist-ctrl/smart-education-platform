@@ -41,24 +41,42 @@ export default async function StudentDashboardPage() {
     redirect('/login?redirectTo=/student');
   }
 
-  // 1. Fetch user profile
+  // 1. Fetch user profile and verify role
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
+
+  const role = profile?.role || (user.user_metadata?.role as string) || 'student';
+
+  if (role !== 'student') {
+    if (role === 'teacher') redirect('/teacher');
+    if (role === 'parent') redirect('/parent');
+    if (role === 'admin') redirect('/admin');
+    if (role === 'super_admin') redirect('/super-admin');
+  }
 
   // 2. Fetch student profile details
   const { data: studentProfile } = await supabase
     .from('student_profiles')
     .select('*, class:classes(*), section:sections(*)')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  // If onboarding hasn't been completed, redirect
+  // If onboarding hasn't been completed, redirect to onboarding
   if (studentProfile && !studentProfile.onboarding_completed) {
     redirect('/onboarding');
   }
+
+  const userProfile: Profile = profile || {
+    id: user.id,
+    email: user.email || '',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Student',
+    role: 'student',
+    created_at: user.created_at,
+    updated_at: user.created_at,
+  };
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -132,7 +150,7 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar profile={profile} />
+      <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-28 md:pb-8">
         {/* Welcome & Gamification Header */}
@@ -143,7 +161,7 @@ export default async function StudentDashboardPage() {
               <span>Personalized Learning Hub</span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-tight">
-              Welcome back, {profile?.full_name || 'Student'}!
+              Welcome back, {userProfile.full_name}!
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {studentProfile?.class ? `${studentProfile.class.name} • ` : ''}

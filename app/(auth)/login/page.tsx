@@ -9,10 +9,13 @@ import { GraduationCap, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 import { Suspense } from 'react';
 
+import { useAuth } from '@/lib/auth/context';
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo');
+  const { refreshProfile } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,27 +29,46 @@ function LoginForm() {
     setLoading(true);
     setErrorMsg(null);
 
+    const cleanEmail = email.trim();
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        if (error.message.toLowerCase().includes('invalid login credentials')) {
+          setErrorMsg('Invalid email or password. Please check your credentials and try again.');
+        } else if (error.message.toLowerCase().includes('email not confirmed')) {
+          setErrorMsg('Your email is not verified yet. Please check your inbox for the verification email.');
+        } else {
+          setErrorMsg(error.message);
+        }
         setLoading(false);
         return;
       }
 
       if (data.user) {
-        // Fetch role to direct to correct portal
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
+        // Synchronize auth context state
+        await refreshProfile();
 
-        const role = profile?.role || 'student';
+        // Fetch user profile to direct to the correct portal
+        let role: string = (data.user.user_metadata?.role as string) || 'student';
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile?.role) {
+            role = profile.role;
+          }
+        } catch (e) {
+          // Fallback to metadata
+        }
+
         if (redirectTo) {
           router.push(redirectTo);
         } else if (role === 'teacher') {
@@ -58,7 +80,18 @@ function LoginForm() {
         } else if (role === 'super_admin') {
           router.push('/super-admin');
         } else {
-          router.push('/student');
+          // Check if student completed onboarding
+          const { data: sp } = await supabase
+            .from('student_profiles')
+            .select('onboarding_completed')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          if (sp && sp.onboarding_completed) {
+            router.push('/student');
+          } else {
+            router.push('/onboarding');
+          }
         }
         router.refresh();
       }
