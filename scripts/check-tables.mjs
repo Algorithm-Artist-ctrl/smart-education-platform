@@ -34,9 +34,9 @@ async function check() {
 
   console.log('Checking database tables:');
   for (const table of tables) {
-    const { data, error } = await supabase.from(table).select('count', { count: 'exact', head: true });
+    const { data, error } = await supabase.from(table).select('*').limit(1);
     if (error) {
-      console.log(`- ${table}: MISSING or Error (${error.message})`);
+      console.log(`- ${table}: MISSING (${error.code || error.message})`);
     } else {
       console.log(`- ${table}: EXISTS`);
     }
