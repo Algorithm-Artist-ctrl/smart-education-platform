@@ -3,9 +3,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { GraduationCap, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, ArrowRight, Loader2, AlertCircle, CheckCircle2, Sparkles, User, Mail, Lock, Shield } from 'lucide-react';
 import { UserRole } from '@/types/database.types';
 
 export default function RegisterPage() {
@@ -106,162 +107,246 @@ export default function RegisterPage() {
         if (data.session) {
           window.location.href = role === 'student' ? '/onboarding' : `/${role}`;
           return;
-        } else if (data.user) {
-          setSuccessMsg(
-            'Registration successful! Please check your email inbox to confirm your account before logging in.'
-          );
-          setLoading(false);
-          return;
         }
+
+        setSuccessMsg(
+          'Account created! If email confirmation is enabled, please verify your email before logging in.'
+        );
+        setLoading(false);
       } catch (clientErr: any) {
         console.error('Client registration fallback error:', clientErr);
-        setErrorMsg('Unable to connect to the authentication service. Please check your network and try again.');
+        setErrorMsg('Unable to connect to registration service. Please try again.');
         setLoading(false);
-        return;
       }
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-slate-50">
-      <div className="w-full max-w-md">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 font-bold text-xl text-indigo-600">
-            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
-              <GraduationCap className="w-6 h-6" />
-            </div>
-            <span className="text-slate-900 tracking-tight">Smart Edu</span>
-          </Link>
-          <h2 className="mt-4 text-2xl font-bold text-slate-900">Create your account</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Start your personalized educational journey
-          </p>
+    <div className="min-h-screen flex bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+      {/* Ambient background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-indigo-950/40 via-purple-900/20 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      {/* Left 3D Visual Panel (Desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 border-r border-white/10 bg-gradient-to-br from-slate-950/80 via-indigo-950/30 to-slate-950/80 backdrop-blur-md overflow-hidden">
+        <div className="absolute inset-0 -z-10 opacity-35 mix-blend-screen pointer-events-none">
+          <Image
+            src="/images/learning_map_worlds.jpg"
+            alt="Smart Edu Learning Worlds"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#060913] via-[#060913]/60 to-transparent" />
         </div>
 
-        {/* Card */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          {errorMsg && (
-            <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+        {/* Brand Header */}
+        <Link href="/" className="inline-flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 p-0.5 shadow-lg shadow-indigo-500/30 flex items-center justify-center">
+            <div className="w-full h-full bg-slate-950/60 rounded-[14px] flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-indigo-400" />
             </div>
-          )}
+          </div>
+          <div>
+            <span className="text-lg font-black tracking-tight text-white block">Smart Edu</span>
+            <span className="text-[10px] font-mono tracking-widest text-indigo-400 uppercase block -mt-1">
+              Join the Galaxy
+            </span>
+          </div>
+        </Link>
 
-          {successMsg && (
-            <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{successMsg}</span>
+        {/* Hero Copy */}
+        <div className="max-w-md space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-bold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Cadet Enrollment</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+            Begin Your Learning Quest.
+          </h1>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Create your account to unlock interactive 3D subject worlds, personalized AI tutoring with Nova, and competitive class leaderboards.
+          </p>
+
+          <div className="pt-2 flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-semibold text-slate-300">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Free Forever Plan</span>
             </div>
-          )}
-
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Alex Sharma"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-semibold text-slate-300">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>+100 Bonus Coins</span>
             </div>
+          </div>
+        </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="alex@example.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              />
-            </div>
+        <div className="text-xs text-slate-500 font-medium">
+          © {new Date().getFullYear()} Smart Education Platform. All rights reserved.
+        </div>
+      </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter your password"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                I am registering as a
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['student', 'teacher', 'parent'] as UserRole[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`py-2 px-3 text-xs font-semibold rounded-xl border capitalize transition text-center ${
-                      role === r
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+      {/* Right Form Panel */}
+      <div className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-12 py-12 relative z-10">
+        <div className="w-full max-w-md space-y-6">
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-4">
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30">
+                <GraduationCap className="w-6 h-6" />
               </div>
+              <span className="text-xl font-black text-white tracking-tight">Smart Edu</span>
+            </Link>
+          </div>
+
+          <div className="cosmic-card p-6 sm:p-8 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl space-y-5">
+            <div>
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-400">
+                New Cadet Registration
+              </span>
+              <h2 className="text-2xl font-black text-white mt-1">Create Your Account</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Choose your role and enter your details to launch your experience.
+              </p>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating account...</span>
-                </>
-              ) : (
-                <>
-                  <span>Create Account</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+            {errorMsg && (
+              <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3 text-xs text-rose-300">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-500">
-              Already have an account?{' '}
-              <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-800">
-                Sign in
-              </Link>
-            </p>
+            {successMsg && (
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-start gap-3 text-xs text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              {/* Role Selector Pills */}
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Select Role
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'student', label: 'Student' },
+                    { id: 'teacher', label: 'Teacher' },
+                    { id: 'parent', label: 'Parent' },
+                  ].map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setRole(r.id as UserRole)}
+                      className={`py-2.5 rounded-xl text-xs font-bold transition border capitalize ${
+                        role === r.id
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/30'
+                          : 'bg-slate-800/80 border-white/5 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Aarav Sharma"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="student@smartedu.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Confirm
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium placeholder:text-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:opacity-60 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 active:scale-[0.99] touch-manipulation mt-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Enrolling Cadet...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create Free Account</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-4 border-t border-white/10 text-center">
+              <p className="text-xs text-slate-400">
+                Already have an account?{' '}
+                <Link href="/login" className="font-bold text-indigo-400 hover:text-indigo-300 ml-1">
+                  Sign in here
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

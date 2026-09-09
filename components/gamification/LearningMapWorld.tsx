@@ -128,8 +128,8 @@ export default function LearningMapWorld({
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {subjects.map((sub, idx) => {
               const theme = getTheme(sub.name);
-              const progress = subjectProgress[sub.id] || { completedLevels: 2 + idx * 2, totalLevels: 10 };
-              const percent = Math.min(100, Math.round((progress.completedLevels / progress.totalLevels) * 100));
+              const progress = subjectProgress[sub.id] || { completedLevels: 0, totalLevels: 1 };
+              const percent = Math.min(100, Math.round((progress.completedLevels / Math.max(progress.totalLevels, 1)) * 100));
 
               return (
                 <Link
@@ -225,8 +225,8 @@ export default function LearningMapWorld({
         <div className="space-y-3">
           {subjects.map((sub, idx) => {
             const theme = getTheme(sub.name);
-            const progress = subjectProgress[sub.id] || { completedLevels: 2 + idx * 2, totalLevels: 10 };
-            const percent = Math.min(100, Math.round((progress.completedLevels / progress.totalLevels) * 100));
+            const progress = subjectProgress[sub.id] || { completedLevels: 0, totalLevels: 1 };
+            const percent = Math.min(100, Math.round((progress.completedLevels / Math.max(progress.totalLevels, 1)) * 100));
 
             return (
               <Link

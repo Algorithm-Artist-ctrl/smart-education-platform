@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/context';
 import { AcademicClass, Section, Subject } from '@/types/database.types';
-import { GraduationCap, ArrowRight, CheckCircle2, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { GraduationCap, ArrowRight, CheckCircle2, Loader2, Sparkles, AlertCircle, Check, Zap, Target, BookOpen } from 'lucide-react';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -25,7 +25,10 @@ export default function OnboardingPage() {
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [rollNumber, setRollNumber] = useState<string>('');
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([
+    'Score > 90% in upcoming Exams',
+    'Daily Disciplined Study Routine'
+  ]);
 
   const availableGoals = [
     'Score > 90% in upcoming Exams',
@@ -120,7 +123,7 @@ export default function OnboardingPage() {
       const sectionId = selectedSection && selectedSection.trim() !== '' ? selectedSection.trim() : null;
       const roll = rollNumber && rollNumber.trim() !== '' ? rollNumber.trim() : null;
 
-      // 1. Update auth user metadata so onboarding completion is always preserved
+      // 1. Update auth user metadata
       try {
         await supabase.auth.updateUser({
           data: {
@@ -134,7 +137,7 @@ export default function OnboardingPage() {
         console.warn('Auth user metadata update warning:', metaErr);
       }
 
-      // 2. Update student profile in Supabase table if it exists
+      // 2. Update student profile in Supabase table
       try {
         await supabase
           .from('student_profiles')
@@ -148,10 +151,10 @@ export default function OnboardingPage() {
             updated_at: new Date().toISOString(),
           });
       } catch (spError) {
-        console.warn('Student profile upsert warning (table pending migration):', spError);
+        console.warn('Student profile upsert warning:', spError);
       }
 
-      // Initialize default study plan item for today (non-blocking)
+      // Initialize default study plan item for today
       try {
         await supabase.from('study_plans').insert({
           student_id: user.id,
@@ -163,12 +166,10 @@ export default function OnboardingPage() {
           status: 'pending',
         });
       } catch (e) {
-        console.warn('Initial study plan item could not be created:', e);
+        console.warn('Initial study plan item creation warning:', e);
       }
 
-      // Synchronize client auth state
       await refreshProfile();
-
       router.push('/student');
       router.refresh();
     } catch (err: any) {
@@ -180,159 +181,175 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      <div className="min-h-screen flex items-center justify-center bg-[#060913]">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-slate-50">
-      <div className="w-full max-w-xl">
-        <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-2xl mb-3">
+    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-hidden">
+      {/* Ambient background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-indigo-950/40 via-purple-900/20 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      <div className="w-full max-w-xl space-y-6 relative z-10">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 mb-2">
             <GraduationCap className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Personalize Your Learning Journey</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Step {step} of 2 — Tell us about your academic goals
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Initialize Cadet Profile</h1>
+          <p className="text-xs text-slate-400">
+            Step {step} of 2 — Configure your academic sector & personal objectives
           </p>
+
+          {/* Progress Indicators */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <div className={`w-12 h-1.5 rounded-full transition-all ${
+              step >= 1 ? 'bg-indigo-500 shadow-md shadow-indigo-500/50' : 'bg-slate-800'
+            }`} />
+            <div className={`w-12 h-1.5 rounded-full transition-all ${
+              step >= 2 ? 'bg-indigo-500 shadow-md shadow-indigo-500/50' : 'bg-slate-800'
+            }`} />
+          </div>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+        {/* Card */}
+        <div className="cosmic-card p-6 sm:p-8 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl space-y-6">
           {errorMsg && (
-            <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3 text-xs text-rose-300">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
+
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                <span>1. Academic Information</span>
-              </h3>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-indigo-400 pb-2 border-b border-white/10">
+                <Target className="w-4 h-4" />
+                <span>Sector & Academic Details</span>
+              </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Select Your Class / Grade
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Select Your Grade / Class
                 </label>
                 <select
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium focus:border-indigo-500 outline-none"
                 >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id} className="bg-slate-900 text-white">
+                      {cls.name} (Grade {cls.grade_level})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Section
-                </label>
-                <select
-                  value={selectedSection}
-                  onChange={(e) => setSelectedSection(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white"
-                >
-                  {sections.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Section
+                  </label>
+                  <select
+                    value={selectedSection}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium focus:border-indigo-500 outline-none"
+                  >
+                    {sections.map((sec) => (
+                      <option key={sec.id} value={sec.id} className="bg-slate-900 text-white">
+                        Section {sec.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                    Roll Number
+                  </label>
+                  <input
+                    type="text"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    placeholder="e.g. 101"
+                    className="w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-white/10 text-white text-xs font-medium placeholder:text-slate-500 focus:border-indigo-500 outline-none"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Roll Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={rollNumber}
-                  onChange={(e) => setRollNumber(e.target.value)}
-                  placeholder="e.g. 104"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition"
-                >
-                  <span>Next: Learning Goals</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2 mt-4"
+              >
+                <span>Continue to Learning Goals</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-5">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2 mb-1">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>2. Select Your Learning Goals</span>
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Select the targets that matter to you. The system customizes your daily study plan around them.
-                </p>
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-indigo-400 pb-2 border-b border-white/10">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Target Objectives</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <p className="text-xs text-slate-300">
+                Select your primary academic goals so Nova can recommend personalized practice sets:
+              </p>
+
+              <div className="space-y-2.5">
                 {availableGoals.map((goal) => {
-                  const active = selectedGoals.includes(goal);
+                  const isSelected = selectedGoals.includes(goal);
                   return (
                     <button
                       key={goal}
                       type="button"
                       onClick={() => toggleGoal(goal)}
-                      className={`p-3 rounded-xl border text-left text-xs font-medium transition flex items-start gap-2.5 ${
-                        active
-                          ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900'
-                          : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      className={`w-full p-3.5 rounded-2xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-indigo-500 text-white ring-1 ring-indigo-400/40 shadow-lg shadow-indigo-950/40'
+                          : 'bg-slate-800/60 border-white/5 text-slate-400 hover:text-white hover:bg-slate-800'
                       }`}
                     >
-                      <CheckCircle2
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-                          active ? 'text-indigo-600' : 'text-slate-300'
-                        }`}
-                      />
                       <span>{goal}</span>
+                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center transition ${
+                        isSelected ? 'bg-indigo-600 text-white' : 'border border-slate-600'
+                      }`}>
+                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 pt-4 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white transition"
                 >
                   Back
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleFinishOnboarding}
                   disabled={saving}
-                  className="py-2.5 px-6 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition"
+                  onClick={handleFinishOnboarding}
+                  className="px-6 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white text-xs font-black rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center gap-2"
                 >
                   {saving ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Saving Profile...</span>
+                      <span>Launching Orbit...</span>
                     </>
                   ) : (
                     <>
-                      <span>Enter Dashboard</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <span>Complete & Claim +100 XP</span>
+                      <Zap className="w-4 h-4 text-amber-300" />
                     </>
                   )}
                 </button>

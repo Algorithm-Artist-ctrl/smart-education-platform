@@ -50,61 +50,7 @@ export default function QuestsPage() {
       if (profRes.data) setProfile(profRes.data as Profile);
       if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
 
-      if (questsRes.data && questsRes.data.length > 0) {
-        setQuests(questsRes.data as Quest[]);
-      } else {
-        // Default seeded quests
-        setQuests([
-          {
-            id: 'q-1',
-            title: 'Daily Orbit: Complete 1 Diagnostic Quiz',
-            description: 'Finish any published subject quiz or practice set to keep your streak alive.',
-            xp_reward: 50,
-            coin_reward: 20,
-            quest_type: 'daily',
-            progress_current: 1,
-            progress_total: 1,
-            is_completed: true,
-            is_claimed: false,
-          },
-          {
-            id: 'q-2',
-            title: 'Double Down: Score 80%+ on any assessment',
-            description: 'Show precision and deep mastery in your next assessment attempt.',
-            xp_reward: 100,
-            coin_reward: 35,
-            quest_type: 'daily',
-            progress_current: 0,
-            progress_total: 1,
-            is_completed: false,
-            is_claimed: false,
-          },
-          {
-            id: 'q-3',
-            title: 'Memory Vault: Complete 3 Flashcard Repetitions',
-            description: 'Reinforce flagged weak topics in the Revision Arena.',
-            xp_reward: 75,
-            coin_reward: 25,
-            quest_type: 'daily',
-            progress_current: 2,
-            progress_total: 3,
-            is_completed: false,
-            is_claimed: false,
-          },
-          {
-            id: 'q-4',
-            title: 'Weekly Galaxy: Complete 5 Study Missions',
-            description: 'Check off 5 scheduled tasks in your Daily Study Planner.',
-            xp_reward: 250,
-            coin_reward: 100,
-            quest_type: 'weekly',
-            progress_current: 3,
-            progress_total: 5,
-            is_completed: false,
-            is_claimed: false,
-          },
-        ]);
-      }
+      setQuests((questsRes.data || []) as Quest[]);
       setLoading(false);
     }
 
@@ -236,6 +182,25 @@ export default function QuestsPage() {
           <div className="py-20 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Syncing Quests...</span>
+          </div>
+        ) : filteredQuests.length === 0 ? (
+          <div className="cosmic-card rounded-3xl border border-white/10 bg-slate-900/60 p-12 text-center space-y-4 max-w-lg mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+              <Gift className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">No Quests in this Sector</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                You have completed all active bounties. Check back tomorrow or take a subject challenge to trigger new quests!
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/student/map')}
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 inline-flex items-center gap-2"
+            >
+              <span>Explore Learning Worlds</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">

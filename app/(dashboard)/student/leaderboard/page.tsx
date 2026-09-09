@@ -74,52 +74,16 @@ export default function LeaderboardPage() {
         }));
         setLeaderboard(mapped);
       } else {
-        // Fallback demo ranks if only 1 student exists
+        // Only current student is in the system
         setLeaderboard([
           {
             id: user.id,
             rank: 1,
-            name: profRes.data?.full_name || 'Alex Morgan',
-            totalPoints: studRes.data?.total_points || 350,
-            level: studRes.data?.level || 2,
-            streakDays: studRes.data?.current_streak || 3,
+            name: profRes.data?.full_name || 'Cadet',
+            totalPoints: studRes.data?.total_points || 0,
+            level: studRes.data?.level || 1,
+            streakDays: studRes.data?.current_streak || 0,
             isCurrentUser: true,
-          },
-          {
-            id: 'demo-2',
-            rank: 2,
-            name: 'Priya Sharma',
-            totalPoints: 320,
-            level: 2,
-            streakDays: 5,
-            isCurrentUser: false,
-          },
-          {
-            id: 'demo-3',
-            rank: 3,
-            name: 'Marcus Chen',
-            totalPoints: 290,
-            level: 2,
-            streakDays: 4,
-            isCurrentUser: false,
-          },
-          {
-            id: 'demo-4',
-            rank: 4,
-            name: 'Sarah Jenkins',
-            totalPoints: 250,
-            level: 1,
-            streakDays: 2,
-            isCurrentUser: false,
-          },
-          {
-            id: 'demo-5',
-            rank: 5,
-            name: 'Ethan Ross',
-            totalPoints: 210,
-            level: 1,
-            streakDays: 1,
-            isCurrentUser: false,
           },
         ]);
       }

@@ -63,7 +63,7 @@ export default async function StudentDashboardPage() {
   const userProfile: Profile = profile || {
     id: user.id,
     email: user.email || '',
-    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Aarav Sharma',
+    full_name: (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'Cadet',
     role: 'student',
     created_at: user.created_at,
     updated_at: user.created_at,
