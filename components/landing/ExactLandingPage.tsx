@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { 
   Sparkles, 
   ArrowRight, 
+  Globe, 
   ChevronDown, 
   Gamepad2, 
   User, 
@@ -15,6 +16,8 @@ import {
   BookOpen, 
   Rocket, 
   Check,
+  Atom,
+  Code
 } from 'lucide-react';
 
 interface ExactLandingPageProps {
@@ -38,90 +41,123 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#060913] text-white selection:bg-indigo-500 selection:text-white flex flex-col justify-between relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#060913] text-white selection:bg-indigo-500 selection:text-white flex flex-col justify-between relative overflow-x-hidden font-sans">
       
       {/* ========================================================================= */}
-      {/* DESKTOP & TABLET: 16:9 EXACT COMPOSITION MATCHING media_1788977316918.jpg */}
+      {/* 3D CELESTIAL BACKGROUND ARTWORK LAYER (Behind & Alongside content) */}
       {/* ========================================================================= */}
-      <div className="hidden lg:flex w-full min-h-screen relative bg-[#060913] items-center justify-center p-0">
+      <div className="absolute top-0 right-0 w-full lg:w-[60%] h-full z-0 pointer-events-none overflow-hidden select-none">
+        {/* The 3D Student Explorer gazing out at floating fantasy islands */}
+        <img
+          src="/images/hero_student.jpg"
+          alt="Smart Edu 3D World"
+          className="w-full h-full object-cover object-center lg:object-right opacity-90"
+        />
+        {/* Smooth Dark Gradient Overlays to preserve absolute text readability on the left */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#060913] via-[#060913]/90 lg:via-[#060913]/65 to-transparent" />
+        <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-[#060913] via-[#060913]/80 to-transparent" />
+        <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-[#060913] via-[#060913]/95 to-transparent" />
+      </div>
+
+      {/* Subtle Cosmic Ambient Glows */}
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
+      {/* ========================================================================= */}
+      {/* TOP HEADER / NAVBAR (Crisp HTML Elements) */}
+      {/* ========================================================================= */}
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 flex items-center justify-between relative z-30">
         
-        {/* Master 16:9 Canvas */}
-        <div className="relative w-full max-w-[1920px] aspect-[16/9] max-h-screen overflow-hidden shadow-2xl bg-black">
-          
-          {/* Base High-Resolution Artwork */}
-          <img
-            src="/images/landing_exact.jpg"
-            alt="Smart Edu - Turn Learning Into an Adventure"
-            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-          />
+        {/* Brand Logo */}
+        <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all">
+            🎓
+          </div>
+          <div>
+            <span className="text-lg sm:text-xl font-black tracking-tight text-white block leading-none">
+              Smart Edu
+            </span>
+            <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wider">
+              Learn · Play · Grow
+            </span>
+          </div>
+        </Link>
 
-          {/* ===================================================================== */}
-          {/* INTERACTIVE HOTSPOTS & HOVER LAYERS */}
-          {/* ===================================================================== */}
-
-          {/* 1. TOP NAVBAR OVERLAYS */}
-          {/* Logo click target */}
+        {/* Center Desktop Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
           <Link
             href="/"
-            className="absolute top-[2.4%] left-[3.2%] w-[15%] h-[6.5%] rounded-xl z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="Smart Edu - Home"
-          />
-
-          {/* Nav Links */}
-          <Link
-            href="/"
-            className="absolute top-[3.2%] left-[27.6%] w-[4.4%] h-[4.8%] rounded-lg z-20 hover:bg-cyan-500/10 transition-colors cursor-pointer"
-            title="Home"
-          />
+            className="text-cyan-400 font-semibold relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-cyan-400 after:rounded-full after:shadow-[0_0_8px_rgba(6,182,212,0.8)]"
+          >
+            Home
+          </Link>
           <Link
             href="/student/map"
-            className="absolute top-[3.2%] left-[32.4%] w-[5.6%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="Features"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            Features
+          </Link>
           <Link
             href="/student"
-            className="absolute top-[3.2%] left-[38.4%] w-[6.8%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="For Students"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            For Students
+          </Link>
           <Link
             href="/teacher"
-            className="absolute top-[3.2%] left-[45.6%] w-[6.8%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="For Teachers"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            For Teachers
+          </Link>
           <Link
             href="/parent"
-            className="absolute top-[3.2%] left-[52.8%] w-[6.2%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="For Parents"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            For Parents
+          </Link>
           <Link
             href="/admin"
-            className="absolute top-[3.2%] left-[59.4%] w-[7.8%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="For Institutions"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            For Institutions
+          </Link>
           <Link
             href="/student/career"
-            className="absolute top-[3.2%] left-[67.6%] w-[4.6%] h-[4.8%] rounded-lg z-20 hover:bg-white/5 transition-colors cursor-pointer"
-            title="About Smart Edu"
-          />
+            className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
+          >
+            About
+          </Link>
+        </nav>
 
+        {/* Right Header Controls: Language, Log In, Sign Up */}
+        <div className="flex items-center gap-3">
+          
           {/* Language Selector Dropdown */}
-          <div className="absolute top-[3.0%] left-[75.0%] w-[5.5%] h-[5.2%] z-30">
+          <div className="relative">
             <button
+              type="button"
               onClick={() => setLangMenuOpen(!langMenuOpen)}
-              className="w-full h-full rounded-full hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center"
-              title="Change Language"
-            />
+              className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800/90 border border-white/10 hover:border-white/20 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{currentLang}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
             {langMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 w-44 bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-2xl p-2 shadow-2xl z-50 text-xs font-semibold space-y-1">
+              <div className="absolute right-0 top-full mt-2 w-44 bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-1.5 shadow-2xl z-50 text-xs font-semibold space-y-1">
                 {languages.map((lang) => (
                   <button
                     key={lang.code}
+                    type="button"
                     onClick={() => {
                       setCurrentLang(lang.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition ${
-                      currentLang === lang.code ? 'bg-indigo-600 text-white font-bold' : 'text-slate-300 hover:bg-white/10'
+                    className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
+                      currentLang === lang.code
+                        ? 'bg-indigo-600 text-white font-bold'
+                        : 'text-slate-300 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <span>{lang.label}</span>
@@ -132,300 +168,259 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             )}
           </div>
 
-          {/* Log In Button Overlay */}
+          {/* Log In Button */}
           <Link
             href="/login"
-            className="absolute top-[3.0%] left-[81.8%] w-[6.8%] h-[5.2%] rounded-full z-20 hover:ring-2 hover:ring-white/30 hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
-            title="Log In to Smart Edu"
-          />
-
-          {/* Sign Up Button Overlay */}
-          <Link
-            href="/register"
-            className="absolute top-[3.0%] left-[89.2%] w-[7.4%] h-[5.2%] rounded-full z-20 hover:ring-2 hover:ring-purple-400/80 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] active:scale-95 transition-all cursor-pointer"
-            title="Create Smart Edu Account"
-          />
-
-          {/* 2. HERO CALL TO ACTION BUTTONS */}
-          {/* Start Your Journey Button */}
-          <Link
-            href="/register"
-            className="absolute top-[60.2%] left-[3.6%] w-[17.6%] h-[7.8%] rounded-full z-20 hover:ring-2 hover:ring-cyan-300/80 hover:shadow-[0_0_25px_rgba(6,182,212,0.6)] active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
-            title="Start Your Learning Journey Now"
+            className="px-4 sm:px-5 py-2 rounded-full bg-slate-900/60 hover:bg-slate-800/80 border border-white/15 hover:border-white/30 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer active:scale-95"
           >
-            <span className="sr-only">Start Your Journey</span>
+            Log In
           </Link>
 
-          {/* Explore Demo Button */}
+          {/* Sign Up Button */}
           <Link
-            href="/student"
-            className="absolute top-[60.2%] left-[22.2%] w-[14.2%] h-[7.8%] rounded-full z-20 hover:ring-2 hover:ring-white/40 hover:bg-white/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-            title="Explore Interactive Student Demo"
+            href="/register"
+            className="px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition active:scale-95 cursor-pointer"
           >
-            <span className="sr-only">Explore Demo</span>
+            Sign Up
           </Link>
+        </div>
 
-          {/* 3. VERIFIED METRICS HOTSPOTS (Hover Tooltips & Glows) */}
-          <div
-            className="absolute top-[71.2%] left-[3.6%] w-[9.0%] h-[8.2%] rounded-2xl z-20 hover:bg-cyan-500/10 hover:ring-1 hover:ring-cyan-400/40 transition-all cursor-pointer"
-            title="10,000+ Active Students Learning Worldwide"
-          />
-          <div
-            className="absolute top-[71.2%] left-[12.8%] w-[10.8%] h-[8.2%] rounded-2xl z-20 hover:bg-indigo-500/10 hover:ring-1 hover:ring-indigo-400/40 transition-all cursor-pointer"
-            title="500+ Curated Gamified Learning Resources"
-          />
-          <div
-            className="absolute top-[71.2%] left-[23.8%] w-[11.4%] h-[8.2%] rounded-2xl z-20 hover:bg-purple-500/10 hover:ring-1 hover:ring-purple-400/40 transition-all cursor-pointer"
-            title="95% Observed Academic Performance Improvement"
-          />
-          <div
-            className="absolute top-[71.2%] left-[35.4%] w-[10.4%] h-[8.2%] rounded-2xl z-20 hover:bg-blue-500/10 hover:ring-1 hover:ring-blue-400/40 transition-all cursor-pointer"
-            title="Nova AI 24/7 Adaptive Study Companion"
-          />
+      </header>
 
-          {/* 4. CELESTIAL ISLANDS SUBJECT PORTALS */}
-          {/* π Mathematics Island */}
-          <Link
-            href="/student/map"
-            className="absolute top-[23.8%] left-[46.5%] w-[11.6%] h-[5.2%] rounded-full z-20 hover:ring-2 hover:ring-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.8)] active:scale-95 transition-all cursor-pointer"
-            title="Explore Mathematics World (Citadel of Numbers)"
-          />
+      {/* ========================================================================= */}
+      {/* MAIN HERO CONTENT (Crisp, High-Contrast Typography & Real Controls) */}
+      {/* ========================================================================= */}
+      <main className="relative z-10 flex-1 flex flex-col justify-center py-6 sm:py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Left Content Area (7 Cols) */}
+            <div className="lg:col-span-7 space-y-6 max-w-2xl">
+              
+              {/* Feature Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/70 border border-cyan-500/40 text-cyan-300 text-xs font-bold tracking-wide shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <span>Interactive · Personalized · AI-Powered</span>
+              </div>
 
-          {/* ⚛ Science Island */}
-          <Link
-            href="/student/map"
-            className="absolute top-[28.3%] left-[79.0%] w-[9.8%] h-[5.2%] rounded-full z-20 hover:ring-2 hover:ring-cyan-400 hover:shadow-[0_0_20px_rgba(6,182,212,0.8)] active:scale-95 transition-all cursor-pointer"
-            title="Explore Science World (Orbital Laboratory)"
-          />
+              {/* Razor-Sharp Main Heading */}
+              <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-black text-white tracking-tight leading-[1.08] drop-shadow-md">
+                Turn <br />
+                Learning Into <br />
+                an{' '}
+                <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-purple-400 bg-clip-text text-transparent">
+                  Adventure.
+                </span>
+              </h1>
 
-          {/* </> Computer Science Island */}
-          <Link
-            href="/student/map"
-            className="absolute top-[44.8%] left-[72.0%] w-[13.5%] h-[5.2%] rounded-full z-20 hover:ring-2 hover:ring-indigo-400 hover:shadow-[0_0_20px_rgba(99,102,241,0.8)] active:scale-95 transition-all cursor-pointer"
-            title="Explore Computer Science World (Cybernetic Tower)"
-          />
+              {/* Crisp Subtitle */}
+              <p className="text-sm sm:text-base lg:text-lg text-slate-300 leading-relaxed font-normal max-w-xl">
+                Personalized learning, gamified experience, and AI-powered guidance — all in one platform.
+              </p>
 
-          {/* Your Future Starts Here Wooden Sign */}
-          <Link
-            href="/student/career"
-            className="absolute top-[49.2%] left-[82.2%] w-[11.2%] h-[16.8%] rounded-2xl z-20 hover:ring-2 hover:ring-amber-400/80 hover:shadow-[0_0_25px_rgba(245,158,11,0.6)] active:scale-95 transition-all cursor-pointer"
-            title="Your Future Starts Here - Career Galaxy"
-          />
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <Link
+                  href="/register"
+                  className="px-7 sm:px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-sm shadow-xl shadow-indigo-600/40 hover:shadow-indigo-600/60 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer group"
+                >
+                  <span>Start Your Journey</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
 
-          {/* 5. BOTTOM 4 FEATURE CARDS */}
+                <Link
+                  href="/student"
+                  className="px-6 sm:px-7 py-3.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/20 text-slate-200 hover:text-white font-bold text-sm backdrop-blur-md hover:border-white/40 transition-all cursor-pointer"
+                >
+                  <span>Explore Demo</span>
+                </Link>
+              </div>
+
+              {/* 4 Verified Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-4 max-w-xl">
+                
+                {/* 10K+ Students */}
+                <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-cyan-500/40 transition">
+                  <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">
+                      {stats?.studentsCount ? `${stats.studentsCount}+` : '10K+'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-semibold">Students</div>
+                  </div>
+                </div>
+
+                {/* 500+ Learning Resources */}
+                <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-indigo-500/40 transition">
+                  <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">500+</div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">Resources</div>
+                  </div>
+                </div>
+
+                {/* 95% Improved Performance */}
+                <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-purple-500/40 transition">
+                  <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 shrink-0">
+                    <Rocket className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">95%</div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">Performance</div>
+                  </div>
+                </div>
+
+                {/* AI Study Companion */}
+                <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-blue-500/40 transition">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-black text-xs shrink-0">
+                    AI
+                  </div>
+                  <div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">Nova AI</div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">Companion</div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Right Interactive 3D Subject Island Badges (5 Cols on Desktop) */}
+            <div className="lg:col-span-5 relative min-h-[380px] hidden lg:block select-none">
+              
+              {/* Mathematics Island Portal */}
+              <Link
+                href="/student/map"
+                className="absolute top-[12%] left-[8%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-blue-500/50 text-blue-300 text-xs font-bold shadow-lg shadow-blue-500/20 backdrop-blur-md hover:scale-105 hover:border-blue-400 transition cursor-pointer flex items-center gap-1.5 group"
+                title="Mathematics World"
+              >
+                <span className="font-mono text-cyan-400 font-black">π</span>
+                <span>Mathematics</span>
+              </Link>
+
+              {/* Science Island Portal */}
+              <Link
+                href="/student/map"
+                className="absolute top-[24%] right-[6%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-cyan-500/50 text-cyan-300 text-xs font-bold shadow-lg shadow-cyan-500/20 backdrop-blur-md hover:scale-105 hover:border-cyan-400 transition cursor-pointer flex items-center gap-1.5 group"
+                title="Science World"
+              >
+                <Atom className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Science</span>
+              </Link>
+
+              {/* Computer Science Island Portal */}
+              <Link
+                href="/student/map"
+                className="absolute bottom-[36%] left-[28%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-purple-500/50 text-purple-300 text-xs font-bold shadow-lg shadow-purple-500/20 backdrop-blur-md hover:scale-105 hover:border-purple-400 transition cursor-pointer flex items-center gap-1.5 group"
+                title="Computer Science World"
+              >
+                <Code className="w-3.5 h-3.5 text-purple-400" />
+                <span>Computer Science</span>
+              </Link>
+
+              {/* Wooden Signpost: Your Future Starts Here */}
+              <Link
+                href="/student/career"
+                className="absolute bottom-[10%] right-[4%] px-4 py-3 rounded-2xl bg-amber-950/70 border border-amber-500/40 text-amber-200 text-xs font-extrabold shadow-2xl shadow-amber-950/50 backdrop-blur-md hover:scale-105 hover:border-amber-400 transition cursor-pointer flex flex-col items-center justify-center text-center group"
+                title="Your Future Starts Here - Career Galaxy"
+              >
+                <span className="text-[11px] leading-tight">Your Future</span>
+                <span className="text-xs font-black text-amber-100 flex items-center gap-1 mt-0.5">
+                  Starts Here
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </Link>
+
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+      {/* ========================================================================= */}
+      {/* 4 BOTTOM FEATURE CARDS (Crisp HTML Glass Cards) */}
+      {/* ========================================================================= */}
+      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2 relative z-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          
           {/* Card 1: Gamified Learning */}
           <Link
             href="/student/quests"
-            className="absolute top-[83.0%] left-[3.6%] w-[22.2%] h-[11.8%] rounded-3xl z-20 hover:ring-2 hover:ring-cyan-400/60 hover:bg-cyan-500/10 active:scale-98 transition-all cursor-pointer"
-            title="Gamified Learning - Turn study into an exciting journey"
-          />
+            className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-cyan-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <Gamepad2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+                Gamified Learning
+              </h4>
+              <p className="text-xs text-slate-400 truncate">
+                Turn study into an exciting journey
+              </p>
+            </div>
+          </Link>
 
           {/* Card 2: Personalized Paths */}
           <Link
             href="/student/map"
-            className="absolute top-[83.0%] left-[26.4%] w-[22.2%] h-[11.8%] rounded-3xl z-20 hover:ring-2 hover:ring-indigo-400/60 hover:bg-indigo-500/10 active:scale-98 transition-all cursor-pointer"
-            title="Personalized Paths - Learn at your own pace"
-          />
+            className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-indigo-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <User className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+                Personalized Paths
+              </h4>
+              <p className="text-xs text-slate-400 truncate">
+                Learn at your own pace
+              </p>
+            </div>
+          </Link>
 
           {/* Card 3: AI Study Mentor */}
           <Link
             href="/student/revision"
-            className="absolute top-[83.0%] left-[49.6%] w-[22.6%] h-[11.8%] rounded-3xl z-20 hover:ring-2 hover:ring-purple-400/60 hover:bg-purple-500/10 active:scale-98 transition-all cursor-pointer"
-            title="AI Study Mentor - Your always-available guide"
-          />
+            className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-purple-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                AI Study Mentor
+              </h4>
+              <p className="text-xs text-slate-400 truncate">
+                Your always-available guide
+              </p>
+            </div>
+          </Link>
 
           {/* Card 4: Brighter Future */}
           <Link
             href="/student/career"
-            className="absolute top-[83.0%] left-[73.0%] w-[22.6%] h-[11.8%] rounded-3xl z-20 hover:ring-2 hover:ring-blue-400/60 hover:bg-blue-500/10 active:scale-98 transition-all cursor-pointer"
-            title="Brighter Future - Build skills for tomorrow"
-          />
+            className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-blue-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
+                Brighter Future
+              </h4>
+              <p className="text-xs text-slate-400 truncate">
+                Build skills for tomorrow
+              </p>
+            </div>
+          </Link>
 
         </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* MOBILE & TABLET RESPONSIVE VIEW (< 1024px) */}
-      {/* ========================================================================= */}
-      <div className="block lg:hidden w-full min-h-screen flex flex-col bg-[#060913]">
-        
-        {/* Mobile Header */}
-        <header className="px-4 py-4 flex items-center justify-between border-b border-white/10 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-400 to-indigo-600 flex items-center justify-center text-lg shadow-lg shadow-indigo-600/40">
-              🎓
-            </div>
-            <div>
-              <span className="text-base font-black tracking-tight text-white block leading-none">Smart Edu</span>
-              <span className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Learn · Play · Grow</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="px-3.5 py-1.5 rounded-full bg-slate-900 border border-white/15 text-xs font-semibold text-slate-200"
-            >
-              Log In
-            </Link>
-            <Link
-              href="/register"
-              className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-xs font-bold text-white shadow-md shadow-indigo-600/30"
-            >
-              Sign Up
-            </Link>
-          </div>
-        </header>
-
-        {/* Mobile Hero Visual */}
-        <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-950">
-          <img
-            src="/images/landing_exact.jpg"
-            alt="Smart Edu Hero"
-            className="w-full h-full object-cover object-right"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#060913] via-transparent to-transparent" />
-        </div>
-
-        {/* Mobile Hero Content */}
-        <div className="px-5 py-6 space-y-6 flex-1 -mt-8 relative z-10">
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-950/80 border border-cyan-500/40 text-cyan-300 text-xs font-bold shadow-lg">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Interactive · Personalized · AI-Powered</span>
-          </div>
-
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
-              Turn Learning Into an{' '}
-              <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-purple-400 bg-clip-text text-transparent">
-                Adventure.
-              </span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Personalized learning, gamified experience, and AI-powered guidance — all in one platform.
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 pt-2">
-            <Link
-              href="/register"
-              className="w-full py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-black text-xs shadow-xl shadow-indigo-600/40 flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              <span>Start Your Journey</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-
-            <Link
-              href="/student"
-              className="w-full py-3.5 rounded-full bg-slate-900/90 border border-white/20 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-2"
-            >
-              <span>Explore Demo</span>
-            </Link>
-          </div>
-
-          {/* 4 Metrics Strip */}
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 shrink-0">
-                <Users className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-base font-black text-white">{stats?.studentsCount || '10K+'}</div>
-                <div className="text-[10px] text-slate-400 font-semibold">Students</div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
-                <BookOpen className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-base font-black text-white">500+</div>
-                <div className="text-[10px] text-slate-400 font-semibold">Resources</div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 shrink-0">
-                <Rocket className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-base font-black text-white">95%</div>
-                <div className="text-[10px] text-slate-400 font-semibold">Performance</div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 shrink-0 font-black text-xs">
-                AI
-              </div>
-              <div>
-                <div className="text-base font-black text-white">Nova AI</div>
-                <div className="text-[10px] text-slate-400 font-semibold">Companion</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4 Bottom Feature Cards on Mobile */}
-          <div className="space-y-3 pt-4 border-t border-white/10">
-            <Link
-              href="/student/quests"
-              className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-4 hover:border-cyan-500/40 transition block"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
-                <Gamepad2 className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white">Gamified Learning</h4>
-                <p className="text-[11px] text-slate-400">Turn study into an exciting journey</p>
-              </div>
-            </Link>
-
-            <Link
-              href="/student/map"
-              className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-4 hover:border-indigo-500/40 transition block"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
-                <User className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white">Personalized Paths</h4>
-                <p className="text-[11px] text-slate-400">Learn at your own pace</p>
-              </div>
-            </Link>
-
-            <Link
-              href="/student/revision"
-              className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-4 hover:border-purple-500/40 transition block"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-                <Bot className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white">AI Study Mentor</h4>
-                <p className="text-[11px] text-slate-400">Your always-available guide</p>
-              </div>
-            </Link>
-
-            <Link
-              href="/student/career"
-              className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center gap-4 hover:border-blue-500/40 transition block"
-            >
-              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-bold text-white">Brighter Future</h4>
-                <p className="text-[11px] text-slate-400">Build skills for tomorrow</p>
-              </div>
-            </Link>
-          </div>
-
-        </div>
-
-      </div>
+      </footer>
 
     </div>
   );
