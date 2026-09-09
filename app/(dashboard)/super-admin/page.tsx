@@ -94,10 +94,10 @@ export default async function SuperAdminDashboardPage() {
         </div>
 
         {/* Audit Log Table */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-slate-600" />
+              <FileText className="w-5 h-5 text-slate-600 shrink-0" />
               <h3 className="text-base font-bold text-slate-900">System Audit Trail</h3>
             </div>
             <span className="text-xs text-slate-400">Latest 20 recorded activities</span>
@@ -109,30 +109,52 @@ export default async function SuperAdminDashboardPage() {
               description="System actions, role elevations, and security events will be securely recorded here."
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold">
-                    <th className="pb-2">Timestamp</th>
-                    <th className="pb-2">Action</th>
-                    <th className="pb-2">Target Entity</th>
-                    <th className="pb-2">Triggered By</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {auditLogs.map((log: any) => (
-                    <tr key={log.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 text-slate-400 text-[10px]">
-                        {new Date(log.created_at).toLocaleString()}
-                      </td>
-                      <td className="py-2.5 font-semibold text-slate-900">{log.action}</td>
-                      <td className="py-2.5 text-slate-600">{log.entity} ({log.entity_id || 'N/A'})</td>
-                      <td className="py-2.5 text-slate-700">{log.user?.full_name || 'System / Service'}</td>
+            <>
+              {/* Mobile Card List (< sm) */}
+              <div className="block sm:hidden space-y-2.5">
+                {auditLogs.map((log: any) => (
+                  <div key={log.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-slate-900">{log.action}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(log.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      Entity: <span className="font-mono text-slate-800">{log.entity}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 flex items-center justify-between">
+                      <span>By: {log.user?.full_name || 'System / Service'}</span>
+                      <span className="font-mono">{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tablet/Desktop Table (>= sm) */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-semibold">
+                      <th className="pb-2">Timestamp</th>
+                      <th className="pb-2">Action</th>
+                      <th className="pb-2">Target Entity</th>
+                      <th className="pb-2">Triggered By</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {auditLogs.map((log: any) => (
+                      <tr key={log.id} className="hover:bg-slate-50">
+                        <td className="py-2.5 text-slate-400 text-[10px]">
+                          {new Date(log.created_at).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 font-semibold text-slate-900">{log.action}</td>
+                        <td className="py-2.5 text-slate-600">{log.entity} ({log.entity_id || 'N/A'})</td>
+                        <td className="py-2.5 text-slate-700">{log.user?.full_name || 'System / Service'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </main>

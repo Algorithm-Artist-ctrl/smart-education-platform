@@ -86,7 +86,7 @@ function LoginForm() {
         </div>
 
         {/* Card */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">
           {errorMsg && (
             <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -105,7 +105,7 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
               />
             </div>
 
@@ -116,7 +116,7 @@ function LoginForm() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-medium py-1"
                 >
                   Forgot password?
                 </Link>
@@ -127,14 +127,14 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+              className="w-full min-h-[48px] mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center justify-center gap-2 active:scale-[0.99] touch-manipulation"
             >
               {loading ? (
                 <>
@@ -153,7 +153,7 @@ function LoginForm() {
           <div className="mt-6 pt-6 border-t border-slate-100 text-center">
             <p className="text-xs text-slate-500">
               Don&apos;t have an account yet?{' '}
-              <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-800">
+              <Link href="/register" className="font-semibold text-indigo-600 hover:text-indigo-800 p-1">
                 Create an account
               </Link>
             </p>

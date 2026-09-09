@@ -80,7 +80,12 @@ export default function NotificationBell({ userId }: { userId: string }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white shadow-xl ring-1 ring-black/5 z-50 overflow-hidden border border-slate-100">
+        <>
+          <div 
+            className="fixed inset-0 z-40 bg-black/10 sm:bg-transparent" 
+            onClick={() => setIsOpen(false)} 
+          />
+          <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-auto sm:mt-2 sm:w-96 rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 z-50 overflow-hidden border border-slate-100 max-h-[75vh] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
             <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
             {unreadCount > 0 && (
@@ -145,6 +150,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );

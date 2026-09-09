@@ -134,53 +134,53 @@ export default async function StudentDashboardPage() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar profile={profile} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-28 md:pb-8">
         {/* Welcome & Gamification Header */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <section className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 lg:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-indigo-600 mb-1">
-              <Sparkles className="w-4 h-4" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 mb-1">
+              <Sparkles className="w-3.5 h-3.5" />
               <span>Personalized Learning Hub</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-tight">
               Welcome back, {profile?.full_name || 'Student'}!
             </h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               {studentProfile?.class ? `${studentProfile.class.name} • ` : ''}
               {studentProfile?.section ? `${studentProfile.section.name} • ` : ''}
               Keep your momentum going.
             </p>
           </div>
 
-          {/* Gamification Counters */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200/70 px-4 py-2.5 rounded-xl">
-              <div className="p-2 bg-amber-500 text-white rounded-lg">
-                <Flame className="w-5 h-5" />
+          {/* Gamification Counters (Responsive 3-Column Grid) */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-1 sm:gap-3 bg-amber-50/80 border border-amber-200/70 p-2 sm:px-3.5 sm:py-2.5 rounded-xl">
+              <div className="p-1.5 sm:p-2 bg-amber-500 text-white rounded-lg flex-shrink-0">
+                <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <div className="text-xs text-amber-800 font-medium">Daily Streak</div>
-                <div className="text-lg font-bold text-amber-900">{streak} {streak === 1 ? 'Day' : 'Days'}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200/70 px-4 py-2.5 rounded-xl">
-              <div className="p-2 bg-indigo-600 text-white rounded-lg">
-                <Award className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs text-indigo-800 font-medium">XP Points</div>
-                <div className="text-lg font-bold text-indigo-900">{xp} XP</div>
+              <div className="overflow-hidden">
+                <div className="text-[10px] sm:text-xs text-amber-800 font-medium truncate">Streak</div>
+                <div className="text-xs sm:text-base font-bold text-amber-950">{streak} {streak === 1 ? 'Day' : 'Days'}</div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200/70 px-4 py-2.5 rounded-xl">
-              <div className="p-2 bg-emerald-600 text-white rounded-lg">
-                <Target className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-1 sm:gap-3 bg-indigo-50/80 border border-indigo-200/70 p-2 sm:px-3.5 sm:py-2.5 rounded-xl">
+              <div className="p-1.5 sm:p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0">
+                <Award className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <div className="text-xs text-emerald-800 font-medium">Rank Level</div>
-                <div className="text-lg font-bold text-emerald-900">Lvl {level}</div>
+              <div className="overflow-hidden">
+                <div className="text-[10px] sm:text-xs text-indigo-800 font-medium truncate">XP Points</div>
+                <div className="text-xs sm:text-base font-bold text-indigo-950">{xp} XP</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-1 sm:gap-3 bg-emerald-50/80 border border-emerald-200/70 p-2 sm:px-3.5 sm:py-2.5 rounded-xl">
+              <div className="p-1.5 sm:p-2 bg-emerald-600 text-white rounded-lg flex-shrink-0">
+                <Target className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="overflow-hidden">
+                <div className="text-[10px] sm:text-xs text-emerald-800 font-medium truncate">Rank</div>
+                <div className="text-xs sm:text-base font-bold text-emerald-950">Lvl {level}</div>
               </div>
             </div>
           </div>
@@ -188,14 +188,14 @@ export default async function StudentDashboardPage() {
 
         {/* Focus Alerts: Weak Topics & Revision Recommendations */}
         {weakTopics.length > 0 && (
-          <section className="bg-rose-50/70 border border-rose-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-4 mb-4">
+          <section className="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 sm:p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-rose-500 text-white rounded-lg">
+                <div className="p-2 bg-rose-500 text-white rounded-lg flex-shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-rose-950">
+                  <h3 className="text-sm sm:text-base font-bold text-rose-950">
                     Weak Topics Identified ({weakTopics.length})
                   </h3>
                   <p className="text-xs text-rose-700">
@@ -205,7 +205,7 @@ export default async function StudentDashboardPage() {
               </div>
               <Link
                 href="/student/revision"
-                className="text-xs font-semibold px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition whitespace-nowrap"
+                className="text-xs font-semibold px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition whitespace-nowrap min-h-[44px] flex items-center justify-center self-start sm:self-auto"
               >
                 Start Revision
               </Link>
@@ -236,7 +236,7 @@ export default async function StudentDashboardPage() {
                     </span>
                     <Link
                       href={`/student/revision?topic=${wt.topic_id}`}
-                      className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1"
+                      className="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center gap-1 min-h-[40px]"
                     >
                       <span>Revise</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -249,10 +249,10 @@ export default async function StudentDashboardPage() {
         )}
 
         {/* Two-Column Grid: Study Plan & Quick Subjects */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left 2 Cols: Today's Smart Study Plan */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-xs">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
@@ -335,14 +335,14 @@ export default async function StudentDashboardPage() {
                         </div>
                       </div>
 
-                      {plan.status !== 'completed' && (
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Link
                           href={plan.topic_id ? `/student/revision?topic=${plan.topic_id}` : `/student/study-plan`}
-                          className="text-xs font-semibold px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 rounded-lg transition"
+                          className="min-h-[44px] px-4 py-2 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 font-semibold text-xs rounded-lg transition inline-flex items-center justify-center self-start sm:self-auto"
                         >
-                          Start
+                          Start Session
                         </Link>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -350,7 +350,7 @@ export default async function StudentDashboardPage() {
             </div>
 
             {/* Practice Quizzes & Diagnostic Assessments */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
@@ -390,13 +390,13 @@ export default async function StudentDashboardPage() {
                         </p>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                         <span className="text-[11px] text-slate-400">
-                          {ass.duration_minutes} mins • {ass.total_marks} marks
+                          {ass.duration_minutes}m • {ass.total_marks} marks
                         </span>
                         <Link
                           href={`/student/assessments/${ass.id}`}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition"
+                          className="min-h-[44px] px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition inline-flex items-center justify-center"
                         >
                           Start Test
                         </Link>
@@ -411,7 +411,7 @@ export default async function StudentDashboardPage() {
           {/* Right Column: Subjects, Badges & Recent History */}
           <div className="space-y-6">
             {/* My Subjects */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
               <h3 className="text-base font-bold text-slate-900 mb-3">Enrolled Subjects</h3>
               {subjects.length === 0 ? (
                 <EmptyState
@@ -424,7 +424,7 @@ export default async function StudentDashboardPage() {
                     <Link
                       key={sub.id}
                       href={`/student/subjects/${sub.id}`}
-                      className="p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20 transition flex items-center justify-between group"
+                      className="min-h-[48px] p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20 transition flex items-center justify-between group"
                     >
                       <div>
                         <div className="text-xs font-semibold text-slate-900 group-hover:text-indigo-600 transition">
@@ -440,7 +440,7 @@ export default async function StudentDashboardPage() {
             </div>
 
             {/* Badges & Achievements */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-bold text-slate-900">Badges Earned</h3>
                 <span className="text-xs text-indigo-600 font-semibold">{studentBadges.length} Total</span>
@@ -451,16 +451,16 @@ export default async function StudentDashboardPage() {
                   description="Complete assessments and keep daily streaks to earn achievements!"
                 />
               ) : (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {studentBadges.map((sb) => (
                     <div
                       key={sb.id}
                       className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-2.5"
                     >
-                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg">
+                      <div className="p-2 bg-amber-100 text-amber-700 rounded-lg shrink-0">
                         <Award className="w-4 h-4" />
                       </div>
-                      <div className="overflow-hidden">
+                      <div className="overflow-hidden min-w-0">
                         <div className="text-xs font-bold text-slate-900 truncate">
                           {sb.badge?.title}
                         </div>
@@ -475,7 +475,7 @@ export default async function StudentDashboardPage() {
             </div>
 
             {/* Recent Quiz Attempts */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
               <h3 className="text-base font-bold text-slate-900 mb-3">Recent Performance</h3>
               {quizAttempts.length === 0 ? (
                 <EmptyState
@@ -487,17 +487,17 @@ export default async function StudentDashboardPage() {
                   {quizAttempts.map((qa) => (
                     <div
                       key={qa.id}
-                      className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between"
+                      className="min-h-[48px] p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3"
                     >
-                      <div>
-                        <div className="text-xs font-semibold text-slate-900">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-900 truncate">
                           {qa.assessment?.title || 'Assessment'}
                         </div>
                         <div className="text-[10px] text-slate-400">
                           {new Date(qa.start_time).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <div
                           className={`text-sm font-bold ${
                             qa.percentage >= 80
