@@ -31,15 +31,29 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some((c) => c.name.startsWith('sb-'));
 
   // Protected route prefixes
   const protectedRoutes = ['/student', '/teacher', '/parent', '/admin', '/super-admin', '/onboarding'];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+  // Fast path 1: Public route visitor with no auth cookies needs zero Supabase roundtrips
+  if (!hasAuthCookie && !isProtectedRoute && pathname !== '/login' && pathname !== '/register') {
+    return supabaseResponse;
+  }
+
+  // Fast path 2: Unauthenticated user accessing protected route with no auth cookies
+  if (!hasAuthCookie && isProtectedRoute) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirectTo', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Helper to preserve cookies across Next.js redirects
   const createRedirect = (targetUrl: string | URL) => {

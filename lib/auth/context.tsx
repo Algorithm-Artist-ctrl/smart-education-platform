@@ -39,6 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   const syncSessionFromServer = useCallback(async () => {
+    // Optimization: Skip network fetch if no auth cookie exists in browser
+    if (typeof document !== 'undefined') {
+      const hasAuthCookie = document.cookie.split(';').some((c) => c.trim().startsWith('sb-'));
+      if (!hasAuthCookie) {
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setStudentProfile(null);
+        setOnboardingCompleted(false);
+        setLoading(false);
+        return false;
+      }
+    }
+
     try {
       const res = await fetch('/api/auth/session');
       const data = await res.json();

@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -48,10 +49,14 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
       {/* ========================================================================= */}
       <div className="absolute top-0 right-0 w-full lg:w-[60%] h-full z-0 pointer-events-none overflow-hidden select-none">
         {/* The 3D Student Explorer gazing out at floating fantasy islands */}
-        <img
+        <Image
           src="/images/hero_student.jpg"
           alt="Smart Edu 3D World"
-          className="w-full h-full object-cover object-center lg:object-right opacity-90"
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 60vw"
+          quality={80}
+          className="object-cover object-center lg:object-right opacity-90"
         />
         {/* Smooth Dark Gradient Overlays to preserve absolute text readability on the left */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#060913] via-[#060913]/90 lg:via-[#060913]/65 to-transparent" />
@@ -69,7 +74,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 flex items-center justify-between relative z-30">
         
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+        <Link href="/" prefetch={false} className="flex items-center gap-3 group cursor-pointer">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-all">
             🎓
           </div>
@@ -87,42 +92,49 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
           <Link
             href="/"
+            prefetch={false}
             className="text-cyan-400 font-semibold relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-cyan-400 after:rounded-full after:shadow-[0_0_8px_rgba(6,182,212,0.8)]"
           >
             Home
           </Link>
           <Link
             href="/student/map"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             Features
           </Link>
           <Link
             href="/student"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             For Students
           </Link>
           <Link
             href="/teacher"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             For Teachers
           </Link>
           <Link
             href="/parent"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             For Parents
           </Link>
           <Link
             href="/admin"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             For Institutions
           </Link>
           <Link
             href="/student/career"
+            prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
             About
@@ -140,12 +152,13 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800/90 border border-white/10 hover:border-white/20 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
             >
               <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{currentLang}</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
+              <span>{languages.find(l => l.code === currentLang)?.label.split(' ')[0]}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform ${langMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
+            {/* Dropdown Menu */}
             {langMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-44 bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-2xl p-1.5 shadow-2xl z-50 text-xs font-semibold space-y-1">
+              <div className="absolute right-0 mt-2 w-44 rounded-2xl bg-slate-900/95 border border-white/15 shadow-2xl backdrop-blur-xl p-1.5 z-50 animate-in fade-in zoom-in-95">
                 {languages.map((lang) => (
                   <button
                     key={lang.code}
@@ -154,9 +167,9 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                       setCurrentLang(lang.code);
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition cursor-pointer ${
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition ${
                       currentLang === lang.code
-                        ? 'bg-indigo-600 text-white font-bold'
+                        ? 'bg-cyan-500/20 text-cyan-300 font-bold'
                         : 'text-slate-300 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -171,6 +184,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Log In Button */}
           <Link
             href="/login"
+            prefetch={false}
             className="px-4 sm:px-5 py-2 rounded-full bg-slate-900/60 hover:bg-slate-800/80 border border-white/15 hover:border-white/30 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer active:scale-95"
           >
             Log In
@@ -179,6 +193,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Sign Up Button */}
           <Link
             href="/register"
+            prefetch={false}
             className="px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition active:scale-95 cursor-pointer"
           >
             Sign Up
@@ -222,6 +237,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               <div className="flex flex-wrap items-center gap-4 pt-1">
                 <Link
                   href="/register"
+                  prefetch={false}
                   className="px-7 sm:px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-sm shadow-xl shadow-indigo-600/40 hover:shadow-indigo-600/60 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer group"
                 >
                   <span>Start Your Journey</span>
@@ -230,6 +246,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
 
                 <Link
                   href="/student"
+                  prefetch={false}
                   className="px-6 sm:px-7 py-3.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/20 text-slate-200 hover:text-white font-bold text-sm backdrop-blur-md hover:border-white/40 transition-all cursor-pointer"
                 >
                   <span>Explore Demo</span>
@@ -295,6 +312,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               {/* Mathematics Island Portal */}
               <Link
                 href="/student/map"
+                prefetch={false}
                 className="absolute top-[12%] left-[8%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-blue-500/50 text-blue-300 text-xs font-bold shadow-lg shadow-blue-500/20 backdrop-blur-md hover:scale-105 hover:border-blue-400 transition cursor-pointer flex items-center gap-1.5 group"
                 title="Mathematics World"
               >
@@ -305,6 +323,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               {/* Science Island Portal */}
               <Link
                 href="/student/map"
+                prefetch={false}
                 className="absolute top-[24%] right-[6%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-cyan-500/50 text-cyan-300 text-xs font-bold shadow-lg shadow-cyan-500/20 backdrop-blur-md hover:scale-105 hover:border-cyan-400 transition cursor-pointer flex items-center gap-1.5 group"
                 title="Science World"
               >
@@ -315,6 +334,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               {/* Computer Science Island Portal */}
               <Link
                 href="/student/map"
+                prefetch={false}
                 className="absolute bottom-[36%] left-[28%] px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-purple-500/50 text-purple-300 text-xs font-bold shadow-lg shadow-purple-500/20 backdrop-blur-md hover:scale-105 hover:border-purple-400 transition cursor-pointer flex items-center gap-1.5 group"
                 title="Computer Science World"
               >
@@ -325,6 +345,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               {/* Wooden Signpost: Your Future Starts Here */}
               <Link
                 href="/student/career"
+                prefetch={false}
                 className="absolute bottom-[10%] right-[4%] px-4 py-3 rounded-2xl bg-amber-950/70 border border-amber-500/40 text-amber-200 text-xs font-extrabold shadow-2xl shadow-amber-950/50 backdrop-blur-md hover:scale-105 hover:border-amber-400 transition cursor-pointer flex flex-col items-center justify-center text-center group"
                 title="Your Future Starts Here - Career Galaxy"
               >
@@ -350,6 +371,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Card 1: Gamified Learning */}
           <Link
             href="/student/quests"
+            prefetch={false}
             className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-cyan-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -368,6 +390,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Card 2: Personalized Paths */}
           <Link
             href="/student/map"
+            prefetch={false}
             className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-indigo-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
@@ -386,7 +409,8 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Card 3: AI Study Mentor */}
           <Link
             href="/student/revision"
-            className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-purple-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
+            prefetch={false}
+            className="p-4 rounded-3xl bg-slate-900/80 border border-purple-500/20 hover:border-purple-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <Bot className="w-5 h-5" />
@@ -404,6 +428,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
           {/* Card 4: Brighter Future */}
           <Link
             href="/student/career"
+            prefetch={false}
             className="p-4 rounded-3xl bg-slate-900/80 border border-white/10 hover:border-blue-500/40 backdrop-blur-xl flex items-center gap-3.5 shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer group"
           >
             <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">

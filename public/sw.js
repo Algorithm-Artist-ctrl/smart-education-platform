@@ -1,12 +1,8 @@
 // public/sw.js
-const CACHE_NAME = 'smart-edu-cache-v1';
+const CACHE_NAME = 'smart-edu-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/student',
-  '/student/study-plan',
-  '/student/revision',
-  '/student/career',
 ];
 
 self.addEventListener('install', (event) => {
