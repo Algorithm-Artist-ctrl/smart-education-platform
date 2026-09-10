@@ -3,7 +3,24 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Sparkles, X, Send, Bot, ArrowRight, Lightbulb, MessageSquare, Loader2 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n/context';
+import { 
+  Sparkles, 
+  X, 
+  Send, 
+  Bot, 
+  ArrowRight, 
+  Lightbulb, 
+  MessageSquare, 
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Zap,
+  HelpCircle,
+  Brain
+} from 'lucide-react';
 
 interface NovaAICompanionProps {
   weakTopicName?: string | null;
@@ -24,26 +41,38 @@ export default function NovaAICompanion({
   mode = 'both',
   className = '',
 }: NovaAICompanionProps) {
+  const { language } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
+  const initialGreeting = language === 'hi'
+    ? weakTopicName
+      ? `नमस्ते ${studentName}! मैंने देखा कि आप "${weakTopicName}" में सुधार कर सकते हैं। क्या हम इसे साथ में समझें या 1 अभ्यास प्रश्न हल करें?`
+      : `नमस्ते ${studentName}! मैं नोवा हूँ, आपका AI स्टडी मेंटर। मुझसे ${recommendedSubject}, फॉर्मूले या होमवर्क के बारे में कुछ भी पूछें!`
+    : weakTopicName
+      ? `Hi ${studentName}! I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
+      : `Greetings ${studentName}! I'm Nova, your AI study mentor. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`;
+
+  const [messages, setMessages] = useState<Array<{ sender: 'nova' | 'user'; text: string }>>([
+    {
+      sender: 'nova',
+      text: initialGreeting,
+    },
+  ]);
+  const [inputVal, setInputVal] = useState('');
+
+  // Listen for open events
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
     window.addEventListener('open-nova-mentor', handleOpen);
     return () => window.removeEventListener('open-nova-mentor', handleOpen);
   }, []);
 
-  const [messages, setMessages] = useState<Array<{ sender: 'nova' | 'user'; text: string }>>([
-    {
-      sender: 'nova',
-      text: weakTopicName
-        ? `Hi ${studentName}! I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
-        : `Greetings ${studentName}! I'm Nova, your AI study mentor. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`,
-    },
-  ]);
-  const [inputVal, setInputVal] = useState('');
-
+  // Scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -54,7 +83,81 @@ export default function NovaAICompanion({
     }
   }, [messages, isOpen, isLoading]);
 
-  const handleSend = async (textToSend?: string) => {
+  // Voice recognition setup
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recog = new SpeechRecognition();
+        recog.continuous = false;
+        recog.interimResults = false;
+        recog.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+
+        recog.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInputVal(transcript);
+            handleSend(transcript);
+          }
+          setIsListening(false);
+        };
+
+        recog.onerror = () => {
+          setIsListening(false);
+        };
+
+        recog.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recog;
+      }
+    }
+  }, [language]);
+
+  const toggleVoiceListening = () => {
+    if (!recognitionRef.current) {
+      alert('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        recognitionRef.current.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn('Voice start warning:', err);
+      }
+    }
+  };
+
+  const speakText = (text: string, index: number) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (speakingMsgIndex === index) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgIndex(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#_`]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+    utterance.rate = 1.0;
+
+    utterance.onend = () => setSpeakingMsgIndex(null);
+    utterance.onerror = () => setSpeakingMsgIndex(null);
+
+    setSpeakingMsgIndex(index);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleSend = async (textToSend?: string, actionType?: string) => {
     const userText = (textToSend || inputVal).trim();
     if (!userText || isLoading) return;
 
@@ -77,6 +180,8 @@ export default function NovaAICompanion({
             level,
             currentSubject: recommendedSubject,
             weakTopics: weakTopicName ? [weakTopicName] : [],
+            language,
+            actionType,
           },
         }),
       });
@@ -89,7 +194,9 @@ export default function NovaAICompanion({
           ...prev,
           {
             sender: 'nova',
-            text: data.error || "I'm having trouble retrieving that from my knowledge cortex right now. Please try asking again!",
+            text: data.error || (language === 'hi' 
+              ? 'मुझे उत्तर तैयार करने में समस्या आ रही है। कृपया पुनः प्रयास करें।'
+              : "I'm having trouble retrieving that from my knowledge cortex right now. Please try asking again!"),
           },
         ]);
       }
@@ -98,7 +205,9 @@ export default function NovaAICompanion({
         ...prev,
         {
           sender: 'nova',
-          text: "I couldn't reach the server right now. Please check your network connection and try again!",
+          text: language === 'hi'
+            ? 'सर्वर से संपर्क नहीं हो सका। कृपया अपना नेटवर्क जांचें।'
+            : "I couldn't reach the server right now. Please check your network connection and try again!",
         },
       ]);
     } finally {
@@ -111,15 +220,19 @@ export default function NovaAICompanion({
     handleSend();
   };
 
-  const quickPrompts = [
-    `Explain ${recommendedSubject} key concepts simply`,
-    `Give me a practice problem on ${weakTopicName || recommendedSubject}`,
-    `How do I earn XP and level up fast?`,
+  // Quick Action buttons per Part 14
+  const quickActions = [
+    { label: "Explain like I'm 10", hi: 'सरल 10-वर्षीय भाषा में समझाएं', action: 'explain_10' },
+    { label: 'Make it easier', hi: 'और आसान बनाएं', action: 'simplify' },
+    { label: 'Give me a hint', hi: 'एक संकेत दें', action: 'hint' },
+    { label: 'Explain with example', hi: 'उदाहरण देकर समझाएं', action: 'example' },
+    { label: 'Practice question', hi: 'एक अभ्यास प्रश्न दें', action: 'practice' },
+    { label: 'Quiz me', hi: 'मेरी परीक्षा लें', action: 'quiz' },
   ];
 
   return (
     <>
-      {/* 1. Inline Widget Card (if mode is inline or both) */}
+      {/* 1. Inline Widget Card */}
       {(mode === 'inline' || mode === 'both') && (
         <div
           className={`cosmic-card rounded-2xl p-4 border border-cyan-500/20 bg-slate-900/80 shadow-xl shadow-cyan-950/20 relative overflow-hidden group ${className}`}
@@ -152,30 +265,34 @@ export default function NovaAICompanion({
               </div>
               <p className="text-xs text-slate-300 leading-snug line-clamp-2">
                 {weakTopicName
-                  ? `Want to practice 5 questions on "${weakTopicName}"?`
-                  : `Ready to master your next mission in ${recommendedSubject}?`}
+                  ? language === 'hi'
+                    ? `क्या आप "${weakTopicName}" पर 5 अभ्यास प्रश्न करना चाहते हैं?`
+                    : `Want to practice 5 questions on "${weakTopicName}"?`
+                  : language === 'hi'
+                    ? `${recommendedSubject} में अपने अगले मिशन को पूरा करने के लिए तैयार हैं?`
+                    : `Ready to master your next mission in ${recommendedSubject}?`}
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setIsOpen(true)}
-              className="shrink-0 px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-cyan-500/25 transition-all flex items-center gap-1 cursor-pointer"
+              className="shrink-0 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-cyan-500/25 transition-all flex items-center gap-1 cursor-pointer"
             >
-              <span>Ask Nova</span>
+              <span>{language === 'hi' ? 'नोवा से पूछें' : 'Ask Nova'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      {/* 2. Floating Persistent Widget (bottom right on screen) */}
+      {/* 2. Floating Persistent Widget */}
       {(mode === 'floating' || mode === 'both') && !isOpen && (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
           className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-40 p-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 shadow-2xl shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 group border border-cyan-400/40 cursor-pointer"
-          title="Chat with Nova AI Mentor"
+          title={language === 'hi' ? 'नोवा AI मेंटर से बात करें' : 'Chat with Nova AI Mentor'}
         >
           <div className="w-9 h-9 rounded-full relative overflow-hidden bg-slate-950 border border-white/20">
             <Image
@@ -211,15 +328,22 @@ export default function NovaAICompanion({
                   <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                     Nova AI Companion
                     <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded-full font-bold">
-                      Online
+                      {language === 'hi' ? 'ऑनलाइन' : 'Online'}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400">Personalized Smart Edu Study Mentor</p>
+                  <p className="text-[11px] text-slate-400">
+                    {language === 'hi' ? 'स्मार्ट एडु व्यक्तिगत अध्ययन साथी' : 'Personalized Smart Edu Study Mentor'}
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                  }
+                  setIsOpen(false);
+                }}
                 className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -234,13 +358,29 @@ export default function NovaAICompanion({
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap relative group ${
                       msg.sender === 'user'
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-600/20'
                         : 'bg-slate-800/90 text-slate-200 border border-white/10'
                     }`}
                   >
                     {msg.text}
+
+                    {/* Speaker icon for reading Nova text aloud */}
+                    {msg.sender === 'nova' && (
+                      <button
+                        type="button"
+                        onClick={() => speakText(msg.text, i)}
+                        className="absolute -bottom-2 -right-2 p-1 rounded-full bg-slate-700 hover:bg-cyan-600 text-slate-300 hover:text-white transition shadow border border-white/10"
+                        title={speakingMsgIndex === i ? 'Stop reading' : 'Read aloud'}
+                      >
+                        {speakingMsgIndex === i ? (
+                          <VolumeX className="w-3 h-3 text-amber-300" />
+                        ) : (
+                          <Volume2 className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -249,29 +389,29 @@ export default function NovaAICompanion({
                 <div className="flex justify-start">
                   <div className="rounded-2xl px-4 py-3 text-xs bg-slate-800/90 text-cyan-300 border border-cyan-500/20 flex items-center gap-2.5 shadow-md">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-                    <span>Nova is preparing your answer...</span>
+                    <span>{language === 'hi' ? 'नोवा उत्तर तैयार कर रहा है...' : 'Nova is preparing your answer...'}</span>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Prompts */}
-            <div className="px-4 py-2 border-t border-white/5 bg-slate-950/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              {quickPrompts.map((prompt, idx) => (
+            {/* Quick Actions Bar (Part 14) */}
+            <div className="px-4 py-2 border-t border-white/5 bg-slate-950/50 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {quickActions.map((qa, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => handleSend(prompt)}
+                  onClick={() => handleSend(qa.label, qa.action)}
                   disabled={isLoading}
-                  className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-50"
+                  className="whitespace-nowrap px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-[10px] text-cyan-300 font-semibold hover:text-white transition cursor-pointer disabled:opacity-50"
                 >
-                  {prompt}
+                  {language === 'hi' ? qa.hi : qa.label}
                 </button>
               ))}
             </div>
 
-            {/* Prompt Form */}
+            {/* Prompt Form with Voice Support */}
             <form
               onSubmit={handleFormSubmit}
               className="p-3.5 border-t border-white/10 bg-slate-900/95 flex items-center gap-2"
@@ -280,10 +420,29 @@ export default function NovaAICompanion({
                 type="text"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
-                placeholder="Ask Nova about a concept, formula, or problem..."
-                disabled={isLoading}
+                placeholder={
+                  language === 'hi'
+                    ? 'नोवा से अवधारणा, सूत्र या प्रश्न पूछें...'
+                    : 'Ask Nova about a concept, formula, or problem...'
+                }
+                disabled={isLoading || isListening}
                 className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 transition-all disabled:opacity-50"
               />
+
+              {/* Voice Mic Button (Part 18) */}
+              <button
+                type="button"
+                onClick={toggleVoiceListening}
+                className={`w-10 h-10 rounded-xl border transition flex items-center justify-center shrink-0 cursor-pointer ${
+                  isListening
+                    ? 'bg-rose-500 text-white border-rose-400 animate-pulse'
+                    : 'bg-slate-800 text-slate-300 border-white/10 hover:text-cyan-300 hover:border-cyan-400/40'
+                }`}
+                title={isListening ? 'Listening... click to cancel' : 'Ask by voice'}
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+
               <button
                 type="submit"
                 disabled={!inputVal.trim() || isLoading}

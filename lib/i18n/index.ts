@@ -61,6 +61,16 @@ export const translations = {
     childAttendance: 'Attendance Overview',
     childWeakAreas: 'Areas Needing Attention',
 
+    // Applied Learning & Accessibility
+    creativityLab: 'Creativity Lab',
+    lifeMissions: 'Life Missions',
+    portfolio: 'Learning Portfolio',
+    accessibility: 'Accessibility & Support',
+    focusMode: 'Focus Mode',
+    readAloud: 'Read Aloud',
+    dyslexiaFont: 'Dyslexia Friendly Font',
+    liteMode: 'Lite Mode',
+
     // Offline / Sync
     offlineNotice: 'You are currently offline. Actions will be saved and synced automatically.',
     onlineNotice: 'Back online! Synced with Supabase.',
@@ -123,6 +133,16 @@ export const translations = {
     childProgress: 'बच्चे की सीखने की प्रगति',
     childAttendance: 'उपस्थिति विवरण',
     childWeakAreas: 'जिन क्षेत्रों में ध्यान देने की आवश्यकता है',
+
+    // Applied Learning & Accessibility
+    creativityLab: 'रचनात्मकता प्रयोगशाला',
+    lifeMissions: 'व्यावहारिक जीवन मिशन',
+    portfolio: 'शिक्षण पोर्टफोलियो',
+    accessibility: 'सुलभता एवं सहायता',
+    focusMode: 'ध्यान मोड',
+    readAloud: 'बोलकर पढ़ें',
+    dyslexiaFont: 'डिस्लेक्सिया-अनुकूल फ़ॉन्ट',
+    liteMode: 'लाइट मोड',
 
     // Offline / Sync
     offlineNotice: 'आप अभी ऑफलाइन हैं। क्रियाएं सहेजी जाएंगी और पुनः कनेक्ट होने पर सिंक होंगी।',

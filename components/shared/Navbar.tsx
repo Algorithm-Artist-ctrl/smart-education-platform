@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n/context';
 import NotificationBell from './NotificationBell';
 import MobileDrawer from './MobileDrawer';
 import MobileBottomNav from './MobileBottomNav';
+import AccessibilityBar from './AccessibilityBar';
 import { 
   GraduationCap, 
   LogOut, 
@@ -150,6 +151,9 @@ export default function Navbar({ profile }: NavbarProps) {
             >
               <Flame className="w-4 h-4 text-orange-400" />
             </Link>
+
+            {/* Accessibility Controls */}
+            <AccessibilityBar />
 
             {/* Bilingual Switcher */}
             <button

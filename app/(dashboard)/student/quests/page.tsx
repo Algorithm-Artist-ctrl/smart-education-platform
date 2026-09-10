@@ -67,36 +67,50 @@ export default function QuestsPage() {
         prev.map((q) => (q.id === quest.id ? { ...q, is_claimed: true, status: 'completed', completed_at: new Date().toISOString() } : q))
       );
 
-      // Increment student coins and XP
-      if (studentProfile) {
-        const rewardCoins = quest.coin_reward ?? quest.coins_reward ?? 25;
-        const newCoins = (studentProfile.coins ?? 100) + rewardCoins;
-        const newXp = (studentProfile.total_points ?? studentProfile.xp ?? 0) + quest.xp_reward;
-        setStudentProfile({
-          ...studentProfile,
-          coins: newCoins,
-          total_points: newXp,
-          xp: newXp,
-        });
+      const res = await fetch('/api/student/quests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questId: quest.id }),
+      });
 
-        await supabase
-          .from('student_profiles')
-          .update({
+      if (res.ok) {
+        const data = await res.json();
+        if (studentProfile) {
+          setStudentProfile({
+            ...studentProfile,
+            coins: data.totalCoins,
+            total_points: data.totalXp,
+            xp: data.totalXp,
+          });
+        }
+      } else {
+        // Fallback to client-side direct update if API route encounters an error
+        const rewardCoins = quest.coin_reward ?? quest.coins_reward ?? 25;
+        const newCoins = (studentProfile?.coins ?? 100) + rewardCoins;
+        const newXp = (studentProfile?.total_points ?? studentProfile?.xp ?? 0) + quest.xp_reward;
+        if (studentProfile) {
+          setStudentProfile({
+            ...studentProfile,
             coins: newCoins,
             total_points: newXp,
+            xp: newXp,
+          });
+          await supabase
+            .from('student_profiles')
+            .update({ coins: newCoins, total_points: newXp })
+            .eq('id', profile.id);
+        }
+        await supabase
+          .from('quests')
+          .update({
+            is_completed: true,
+            is_claimed: true,
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            progress_percent: 100
           })
-          .eq('id', profile.id);
+          .eq('id', quest.id);
       }
-
-      // Mark quest claimed
-      await supabase
-        .from('quests')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          progress_percent: 100
-        })
-        .eq('id', quest.id);
     } catch (err) {
       console.error('Failed to claim quest:', err);
     } finally {

@@ -19,13 +19,14 @@ export default async function LearningMapPage() {
     redirect('/login?redirectTo=/student/map');
   }
 
-  // Fetch student profile, subjects, topics, and completed quizzes
-  const [profileRes, studentProfileRes, subjectsRes, topicsRes, attemptsRes] = await Promise.all([
+  // Fetch student profile, subjects, topics, completed quizzes, and topic mastery records
+  const [profileRes, studentProfileRes, subjectsRes, topicsRes, attemptsRes, masteryRes] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('student_profiles').select('*').eq('id', user.id).single(),
     supabase.from('subjects').select('*').order('created_at', { ascending: true }),
     supabase.from('topics').select('id, subject_id'),
     supabase.from('quiz_attempts').select('topic_id, passed, score_percentage').eq('student_id', user.id),
+    supabase.from('topic_mastery').select('*').eq('student_id', user.id),
   ]);
 
   const profile = profileRes.data as Profile | null;
@@ -33,15 +34,18 @@ export default async function LearningMapPage() {
   const subjects = (subjectsRes.data || []) as Subject[];
   const topics = topicsRes.data || [];
   const attempts = attemptsRes.data || [];
+  const masteries = (masteryRes.data || []) as any[];
 
-  // Calculate subject level progress
+  // Calculate subject level progress based on verified mastery and quiz attempts
   const subjectProgress: Record<string, { completedLevels: number; totalLevels: number }> = {};
 
   subjects.forEach((sub) => {
     const subTopics = topics.filter((t: any) => t.subject_id === sub.id);
-    const completedCount = subTopics.filter((t: any) => 
-      attempts.some((a: any) => a.topic_id === t.id && (a.passed || a.score_percentage >= 60))
-    ).length;
+    const completedCount = subTopics.filter((t: any) => {
+      const hasPassedAttempt = attempts.some((a: any) => a.topic_id === t.id && (a.passed || a.score_percentage >= 60));
+      const hasMastery = masteries.some((m: any) => m.topic_id === t.id && (m.status === 'proficient' || m.status === 'mastered' || m.mastery_score >= 60));
+      return hasPassedAttempt || hasMastery;
+    }).length;
 
     subjectProgress[sub.id] = {
       completedLevels: completedCount,

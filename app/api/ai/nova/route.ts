@@ -1,5 +1,6 @@
 // app/api/ai/nova/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 interface Message {
   role: 'user' | 'model' | 'nova';
@@ -11,26 +12,41 @@ interface StudentContext {
   level?: number;
   currentSubject?: string;
   weakTopics?: string[];
+  language?: 'en' | 'hi';
+  actionType?: 'explain_10' | 'simplify' | 'example' | 'hint' | 'practice' | 'quiz' | string;
 }
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Authenticate student session
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
         {
           success: false,
-          error: 'GEMINI_API_KEY is not configured on the server. Please verify that GEMINI_API_KEY is set in your Render environment variables.',
+          error: 'GEMINI_API_KEY is not configured on the server. Please set GEMINI_API_KEY in your environment variables to enable live AI responses.',
+          code: 'KEY_NOT_CONFIGURED',
         },
         { status: 503 }
       );
     }
 
     const body = await request.json();
-    const { messages = [], studentContext = {} }: { messages: Message[]; studentContext: StudentContext } = body;
+    const { 
+      messages = [], 
+      studentContext = {}, 
+      conversationId 
+    }: { 
+      messages: Message[]; 
+      studentContext: StudentContext; 
+      conversationId?: string 
+    } = body;
 
     if (!messages || messages.length === 0) {
       return NextResponse.json(
@@ -39,36 +55,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Compose system instruction incorporating student context
+    // Compose personalized system prompt
     const studentName = studentContext.studentName || 'Student';
     const level = studentContext.level || 1;
     const subject = studentContext.currentSubject || 'General Academics';
+    const language = studentContext.language || 'en';
+    const actionType = studentContext.actionType;
+
     const weakTopicsStr = studentContext.weakTopics && studentContext.weakTopics.length > 0
-      ? `The student currently has identified weak areas in: ${studentContext.weakTopics.join(', ')}.`
+      ? `The student has currently identified focus areas in: ${studentContext.weakTopics.join(', ')}.`
       : '';
+
+    let languageInstruction = 'Respond in English with clear, engaging, encouraging, and supportive language.';
+    if (language === 'hi') {
+      languageInstruction = 'Respond primarily in natural, clear Hindi (हिंदी), using English academic terms in parentheses where appropriate (e.g. "समीकरण (equation)"). Maintain a friendly, motivating mentor persona.';
+    }
+
+    let actionInstruction = '';
+    if (actionType === 'explain_10') {
+      actionInstruction = 'CRITICAL: Explain this concept as if the student is 10 years old. Use a vivid everyday analogy and short, intuitive sentences.';
+    } else if (actionType === 'simplify') {
+      actionInstruction = 'CRITICAL: Make your explanation as simple and straightforward as possible in 3 clear bullet points with zero unnecessary jargon.';
+    } else if (actionType === 'example') {
+      actionInstruction = 'CRITICAL: Provide a memorable, real-world everyday example illustrating this concept in action.';
+    } else if (actionType === 'hint') {
+      actionInstruction = 'CRITICAL: Give a subtle, guiding hint to help the student figure out the solution themselves. DO NOT give away the final answer.';
+    } else if (actionType === 'practice') {
+      actionInstruction = 'CRITICAL: Provide ONE targeted practice problem matching Level ' + level + ' with 4 multiple choice options (A, B, C, D). Ask the student to pick the right option.';
+    } else if (actionType === 'quiz') {
+      actionInstruction = 'CRITICAL: Formulate a mini-quiz with 2 progressive questions to test conceptual understanding.';
+    }
 
     const systemPrompt = `You are Nova, the intelligent, friendly, and adaptive 3D study mentor on the Smart Edu platform.
 You are tutoring ${studentName}, who is currently at Level ${level}, focusing on ${subject}.
 ${weakTopicsStr}
 
-Your tutoring principles:
-1. Explain academic concepts step-by-step with intuitive clarity, using real-world analogies and visual descriptions.
-2. If the student asks for practice questions, provide 3 to 5 targeted questions with varying difficulty.
-3. If the student provides an answer, check it constructively, pointing out strengths and giving subtle hints for mistakes before revealing full solutions.
-4. Keep explanations concise, engaging, and motivating. Use Markdown formatting (bolding, lists, and formula notation like ax² + bx + c = 0) to make answers easily readable.
-5. Always maintain context from earlier turns in the conversation. Never repeat generic greetings once a conversation is underway.`;
+Language Directive:
+${languageInstruction}
 
-    // Format conversation history for Gemini API (max 10 recent turns to conserve tokens & latency)
+Special Action Directive:
+${actionInstruction}
+
+Core Tutoring Principles:
+1. Explain academic concepts step-by-step with intuitive clarity, using real-world analogies and visual descriptions.
+2. If the student answers a question, evaluate it constructively, highlighting what they did right before guiding errors.
+3. Keep explanations concise, structured, and visually pleasant using Markdown formatting (bolding, lists, and formula notation like ax² + bx + c = 0).
+4. Never repeat generic greetings once a conversation is underway.
+5. Always stay in character as a motivating, warm, and supportive AI study mentor.`;
+
+    // Format conversation history for Gemini API (max 10 recent turns)
     const recentMessages = messages.slice(-10);
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
     for (const msg of recentMessages) {
       const geminiRole = msg.role === 'user' ? 'user' : 'model';
-      // Ensure alternating roles and valid content
       if (!msg.text || !msg.text.trim()) continue;
 
       if (contents.length > 0 && contents[contents.length - 1].role === geminiRole) {
-        // Merge consecutive messages with the same role
         contents[contents.length - 1].parts[0].text += `\n\n${msg.text.trim()}`;
       } else {
         contents.push({
@@ -78,7 +121,6 @@ Your tutoring principles:
       }
     }
 
-    // Ensure first message has role 'user'
     if (contents.length > 0 && contents[0].role !== 'user') {
       contents.shift();
     }
@@ -90,7 +132,7 @@ Your tutoring principles:
       );
     }
 
-    // Attempt generation with gemini-2.5-flash, fallback to gemini-1.5-flash if needed
+    // Call Gemini API (trying gemini-2.5-flash, gemini-1.5-flash, gemini-2.0-flash)
     const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
     let lastError: any = null;
     let replyText = '';
@@ -138,6 +180,48 @@ Your tutoring principles:
         },
         { status: 502 }
       );
+    }
+
+    // Persist conversation and messages in Supabase if student is authenticated
+    if (user) {
+      try {
+        let activeConvoId = conversationId;
+        if (!activeConvoId) {
+          const { data: newConvo } = await supabase
+            .from('nova_conversations')
+            .insert({
+              student_id: user.id,
+              subject_name: subject,
+              title: `${subject} Session`,
+            })
+            .select()
+            .maybeSingle();
+
+          activeConvoId = newConvo?.id;
+        }
+
+        if (activeConvoId) {
+          const latestUserMsg = messages[messages.length - 1];
+          await supabase.from('nova_messages').insert([
+            {
+              conversation_id: activeConvoId,
+              sender: 'user',
+              text: latestUserMsg.text,
+              action_type: actionType || null,
+              language,
+            },
+            {
+              conversation_id: activeConvoId,
+              sender: 'nova',
+              text: replyText,
+              action_type: actionType || null,
+              language,
+            },
+          ]);
+        }
+      } catch (dbErr) {
+        console.warn('Nova conversation persistence warning (handled gracefully):', dbErr);
+      }
     }
 
     return NextResponse.json({

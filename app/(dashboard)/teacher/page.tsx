@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import Navbar from '@/components/shared/Navbar';
 import TeacherActions from '@/components/teacher/TeacherActions';
+import TeacherCohortView from '@/components/teacher/TeacherCohortView';
 import { 
   Users, 
   BookOpen, 
@@ -15,7 +16,8 @@ import {
   Sparkles,
   Zap,
   Layers,
-  GraduationCap
+  GraduationCap,
+  Brain
 } from 'lucide-react';
 import { 
   AcademicClass, 
@@ -72,8 +74,8 @@ export default async function TeacherDashboardPage() {
     supabase.from('assignments').select('*, subject:subjects(*)').order('created_at', { ascending: false }),
     supabase.from('assignment_submissions').select('*, assignment:assignments(*), student:profiles(*)').order('submitted_at', { ascending: false }).limit(10),
     supabase.from('student_profiles').select('*, profile:profiles(*), class:classes(*)'),
-    supabase.from('weak_topics').select('*, topic:topics(*), student:profiles(*)').eq('status', 'active').limit(6),
-    supabase.from('quiz_attempts').select('percentage'),
+    supabase.from('weak_topics').select('*, topic:topics(*), student:profiles(*)').eq('status', 'active'),
+    supabase.from('quiz_attempts').select('student_id, percentage'),
   ]);
 
   const classes = (classesRes.data || []) as AcademicClass[];
@@ -89,6 +91,47 @@ export default async function TeacherDashboardPage() {
   const realMastery = allAttempts.length > 0 
     ? (allAttempts.reduce((acc, a) => acc + (a.percentage || 0), 0) / allAttempts.length).toFixed(1)
     : '0';
+
+  // Compute 3-group cohort breakdown for each student
+  const studentsWithDetails = students.map((s) => {
+    const studentAttempts = allAttempts.filter((a: any) => a.student_id === s.id);
+    const hasAttempts = studentAttempts.length > 0;
+    const avgScore = hasAttempts
+      ? Math.round(studentAttempts.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / studentAttempts.length)
+      : null;
+
+    const studentWeakTopics = activeWeakTopics
+      .filter((w: any) => w.student_id === s.id)
+      .map((w: any) => ({
+        id: w.id,
+        topic_name: w.topic?.name || 'Academic Core',
+        accuracy: w.accuracy_rate,
+      }));
+
+    let cohortStatus: 'on_track' | 'needs_attention' | 'needs_support' = 'on_track';
+    if (studentWeakTopics.length >= 2 || (avgScore !== null && avgScore < 50)) {
+      cohortStatus = 'needs_support';
+    } else if (studentWeakTopics.length === 1 || (avgScore !== null && avgScore < 75)) {
+      cohortStatus = 'needs_attention';
+    }
+
+    return {
+      id: s.id,
+      full_name: s.profile?.full_name || 'Cadet',
+      email: s.profile?.email,
+      avatar_url: s.profile?.avatar_url,
+      level: s.level || 1,
+      xp: s.xp || s.total_points || 0,
+      streak_days: s.streak_days || s.current_streak || 0,
+      learning_preferences: s.learning_preferences || [],
+      support_signals: s.support_signals || [],
+      learning_pace: s.learning_pace || 'steady',
+      strengths: s.strengths || [],
+      weak_topics: studentWeakTopics,
+      cohortStatus,
+      avgScore: avgScore ?? 0,
+    };
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -179,6 +222,20 @@ export default async function TeacherDashboardPage() {
               Requires Grading
             </span>
           </div>
+        </div>
+
+        {/* Understand Every Child - 3 Cohort Breakdown & Student Diagnostics */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <Brain className="w-5 h-5 text-indigo-400" />
+              <span>Understand Every Child (Cohort Diagnostics)</span>
+            </h2>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Differentiated Support & Actionable Teaching Strategies
+            </span>
+          </div>
+          <TeacherCohortView students={studentsWithDetails} />
         </div>
 
         {/* 2-Column: Struggling Students Alert List (Left 6) + Recent Submissions & Assignments (Right 6) */}

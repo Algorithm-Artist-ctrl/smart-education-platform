@@ -168,14 +168,30 @@ export default function AssessmentTakePage({ params }: { params: Promise<{ id: s
 
     try {
       if (navigator.onLine) {
-        // Direct evaluation on real Supabase backend
-        const evaluation = await processAssessmentEvaluation(supabase, {
-          assessment_id: assessmentId,
-          student_id: studentId,
-          start_time: startTime,
-          answers: formattedAnswers,
+        // Submit to secure server-side assessment API
+        const res = await fetch('/api/student/assessments/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assessment_id: assessmentId,
+            start_time: startTime,
+            answers: formattedAnswers,
+          }),
         });
-        setResults(evaluation);
+
+        if (res.ok) {
+          const evalData = await res.json();
+          setResults(evalData);
+        } else {
+          // Fallback to client-side evaluation
+          const evaluation = await processAssessmentEvaluation(supabase, {
+            assessment_id: assessmentId,
+            student_id: studentId,
+            start_time: startTime,
+            answers: formattedAnswers,
+          });
+          setResults(evaluation);
+        }
       } else {
         // Offline queue
         await enqueueAction({

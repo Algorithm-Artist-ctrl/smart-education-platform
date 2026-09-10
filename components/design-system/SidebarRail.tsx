@@ -12,7 +12,10 @@ import {
   Trophy, 
   Compass, 
   Calendar, 
-  RefreshCw 
+  RefreshCw,
+  Palette,
+  Globe,
+  Layers
 } from 'lucide-react';
 
 export function SidebarRail({ className = '' }: { className?: string }) {
@@ -21,10 +24,11 @@ export function SidebarRail({ className = '' }: { className?: string }) {
   const navItems = [
     { href: '/student', label: 'Home', icon: <Home className="w-5 h-5" /> },
     { href: '/student/map', label: 'Learning Map', icon: <Map className="w-5 h-5" /> },
+    { href: '/student/creativity', label: 'Creativity Lab', icon: <Palette className="w-5 h-5" /> },
+    { href: '/student/missions', label: 'Life Missions', icon: <Globe className="w-5 h-5" /> },
+    { href: '/student/portfolio', label: 'Portfolio', icon: <Layers className="w-5 h-5" /> },
     { href: '/student/quests', label: 'Quests', icon: <Target className="w-5 h-5" /> },
     { href: '/student/subjects', label: 'Subjects', icon: <BookOpen className="w-5 h-5" /> },
-    { href: '/student/achievements', label: 'Achievements', icon: <Trophy className="w-5 h-5" /> },
-    { href: '/student/study-plan', label: 'Planner', icon: <Calendar className="w-5 h-5" /> },
     { href: '/student/revision', label: 'Revision', icon: <RefreshCw className="w-5 h-5" /> },
     { href: '/student/career', label: 'Career', icon: <Compass className="w-5 h-5" /> },
   ];

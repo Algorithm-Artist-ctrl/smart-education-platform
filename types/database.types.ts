@@ -27,6 +27,20 @@ export interface StudentProfile {
   level: number;
   coins?: number;
   onboarding_completed: boolean;
+  preferred_language?: 'en' | 'hi';
+  learning_preferences?: string[];
+  support_signals?: string[];
+  learning_pace?: 'steady' | 'fast' | 'thorough';
+  strengths?: string[];
+  accessibility_settings?: {
+    focus_mode?: boolean;
+    read_aloud?: boolean;
+    font_scale?: number;
+    dyslexia_font?: boolean;
+    high_contrast?: boolean;
+    reduced_motion?: boolean;
+    lite_mode?: boolean;
+  };
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -293,3 +307,133 @@ export interface CareerProfile {
   recommendations: Record<string, any>;
   updated_at: string;
 }
+
+export type TopicMasteryStatus = 'new' | 'learning' | 'needs_support' | 'improving' | 'proficient' | 'mastered';
+
+export interface TopicMastery {
+  id: string;
+  student_id: string;
+  topic_id: string;
+  subject_id: string;
+  mastery_score: number;
+  accuracy: number;
+  attempts: number;
+  correct_attempts: number;
+  incorrect_attempts: number;
+  hints_used: number;
+  average_time_seconds: number;
+  difficulty: number;
+  confidence: 'low' | 'medium' | 'high';
+  status: TopicMasteryStatus;
+  last_attempted_at?: string | null;
+  last_mastered_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  topic?: Topic;
+  subject?: Subject;
+}
+
+export interface DiagnosticResult {
+  id: string;
+  student_id: string;
+  completed_at: string;
+  overall_score: number;
+  summary: string;
+  subject_scores: Record<string, number>;
+  identified_strengths: string[];
+  identified_support_signals: string[];
+  recommended_actions: { title: string; type: string; target_id?: string; description: string }[];
+  recommended_path: { subject: string; topic: string; reason: string }[];
+}
+
+export interface CreativitySubmission {
+  id: string;
+  student_id: string;
+  subject_id?: string | null;
+  topic_id?: string | null;
+  title?: string;
+  prompt?: string;
+  submission_type?: 'drawing' | 'text' | 'explanation' | 'design' | 'experiment';
+  content_text?: string | null;
+  drawing_data?: string | null;
+  canvas_data?: string | null;
+  reasoning_text?: string | null;
+  explanation_text?: string | null;
+  ai_feedback?: string | null;
+  creativity_score?: number;
+  understanding_score?: number;
+  xp_earned?: number;
+  xp_awarded?: number;
+  created_at: string;
+  subject?: Subject;
+}
+
+export interface LifeMission {
+  id: string;
+  title: string;
+  subject_name: string;
+  category: string;
+  description: string;
+  task_prompt: string;
+  xp_reward: number;
+  coins_reward: number;
+  created_at: string;
+}
+
+export interface MissionSubmission {
+  id: string;
+  mission_id: string;
+  student_id: string;
+  observation_notes?: string;
+  reflection_text?: string;
+  media_url?: string | null;
+  evidence_url?: string | null;
+  ai_feedback?: string | null;
+  status: 'completed' | 'in_review';
+  xp_earned?: number;
+  submitted_at?: string;
+  created_at?: string;
+  mission?: LifeMission;
+}
+
+export interface PortfolioItem {
+  id: string;
+  student_id: string;
+  title: string;
+  category: 'project' | 'achievement' | 'creativity' | 'mission' | 'certificate' | 'milestone';
+  description?: string | null;
+  artifact_url?: string | null;
+  tags: string[];
+  is_public: boolean;
+  created_at: string;
+}
+
+export interface WellbeingSignal {
+  id: string;
+  student_id: string;
+  feeling: 'good' | 'okay' | 'difficult' | 'overwhelmed';
+  session_notes?: string | null;
+  recorded_date: string;
+  created_at: string;
+}
+
+export interface NovaConversation {
+  id: string;
+  student_id: string;
+  subject_name?: string | null;
+  topic_name?: string | null;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NovaMessage {
+  id: string;
+  conversation_id: string;
+  sender: 'user' | 'nova';
+  text: string;
+  action_type?: string | null;
+  language?: 'en' | 'hi';
+  created_at: string;
+}
+

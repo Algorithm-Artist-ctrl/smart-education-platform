@@ -8,7 +8,9 @@ import Navbar from '@/components/shared/Navbar';
 import MobileBottomNav from '@/components/shared/MobileBottomNav';
 import SidebarRail from '@/components/design-system/SidebarRail';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
+import WellbeingCheckIn from '@/components/gamification/WellbeingCheckIn';
 import { calculateLevel } from '@/lib/gamification-engine';
+import { getRecommendedNextStep } from '@/lib/learning-engine';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -22,7 +24,11 @@ import {
   Clock, 
   ChevronRight,
   Award,
-  Plus
+  Plus,
+  Compass,
+  Palette,
+  Rocket,
+  Lightbulb
 } from 'lucide-react';
 import { Profile, Quest, Subject, WeakTopic, StudyPlan } from '@/types/database.types';
 
@@ -96,9 +102,21 @@ export default async function StudentDashboardPage() {
     ? `Top ${rankPercentile}% In Class` 
     : `#${currentRank} In Class`;
 
-  // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts
+  // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts, Wellbeing, Recommendations, Mastery, Diagnostic
   const todayStr = new Date().toISOString().split('T')[0];
-  const [questsRes, subjectsRes, weakTopicsRes, studyPlansRes, assessmentsRes, attemptsRes] = await Promise.all([
+  const [
+    questsRes, 
+    subjectsRes, 
+    weakTopicsRes, 
+    studyPlansRes, 
+    assessmentsRes, 
+    attemptsRes,
+    wellbeingRes,
+    recommendedStep,
+    masteryRes,
+    diagnosticRes,
+    topicsRes
+  ] = await Promise.all([
     supabase
       .from('quests')
       .select('*')
@@ -131,6 +149,27 @@ export default async function StudentDashboardPage() {
       .from('quiz_attempts')
       .select('score, percentage, passed, assessment_id, assessment:assessments(subject_id)')
       .eq('student_id', user.id),
+    supabase
+      .from('wellbeing_signals')
+      .select('feeling')
+      .eq('student_id', user.id)
+      .eq('recorded_date', todayStr)
+      .maybeSingle(),
+    getRecommendedNextStep(supabase, user.id),
+    supabase
+      .from('topic_mastery')
+      .select('topic_id, subject_id, mastery_score, status')
+      .eq('student_id', user.id),
+    supabase
+      .from('diagnostic_results')
+      .select('subject_scores, overall_score, completed_at')
+      .eq('student_id', user.id)
+      .order('completed_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('topics')
+      .select('id, subject_id'),
   ]);
 
   const quests: Quest[] = questsRes.data || [];
@@ -139,6 +178,11 @@ export default async function StudentDashboardPage() {
   const todayPlans: StudyPlan[] = studyPlansRes.data || [];
   const defaultAssessments = assessmentsRes.data || [];
   const userAttempts = attemptsRes.data || [];
+  const initialFeeling = wellbeingRes.data?.feeling || null;
+  const topicMasteries = masteryRes.data || [];
+  const diagnosticData = diagnosticRes.data || null;
+  const allTopics = topicsRes.data || [];
+  const baselineScores = (diagnosticData?.subject_scores as Record<string, number>) || {};
 
   const primaryQuest: Quest | null = quests[0] || null;
   const primaryWeakTopic = weakTopics[0]?.topic?.name || null;
@@ -146,11 +190,9 @@ export default async function StudentDashboardPage() {
 
   const questTargetUrl = primaryQuest?.target_id 
     ? `/student/assessments/${primaryQuest.target_id}` 
-    : primaryQuest?.id 
-      ? `/student/assessments/${primaryQuest.id}`
-      : firstAssessment?.id
-        ? `/student/assessments/${firstAssessment.id}`
-        : '/student/map';
+    : firstAssessment?.id
+      ? `/student/assessments/${firstAssessment.id}`
+      : '/student/map';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-slate-100 pb-20 md:pb-12 selection:bg-indigo-500/30 selection:text-indigo-200">
@@ -298,7 +340,10 @@ export default async function StudentDashboardPage() {
 
           </div>
 
-          {/* Middle Row: 3D Character Illustration + Today's Quest + Nova AI Widget (Exact Screen 2) */}
+          {/* Daily Learning Experience Signal (Part 27) */}
+          <WellbeingCheckIn initialFeeling={initialFeeling} />
+
+          {/* Middle Row: 3D Character Illustration + Today's Quest + Nova AI Adaptive Recommendation */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
             
             {/* 3D Cadet Character Card (4 cols on md/lg) */}
@@ -393,8 +438,8 @@ export default async function StudentDashboardPage() {
               </div>
             </div>
 
-            {/* Nova AI Companion Card (4 cols on md/lg, matching Screen 2) */}
-            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-indigo-950/30 border border-indigo-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
+            {/* Nova AI Dynamic Adaptive Recommendation Card */}
+            <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-cyan-950/30 border border-cyan-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
@@ -411,29 +456,122 @@ export default async function StudentDashboardPage() {
                         Nova AI
                       </h4>
                       <span className="text-[10px] text-cyan-400 font-semibold">
-                        Adaptive Companion
+                        Next Best Action
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer">×</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold uppercase">
+                    Adaptive
+                  </span>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-slate-200 leading-relaxed mb-3">
-                  Hi <span className="font-bold text-white">{studentName}</span>! 👋 Want to practice questions on {primaryWeakTopic || 'your current subjects'}?
+                <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/25 text-xs text-slate-200 leading-relaxed mb-2 space-y-1.5">
+                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>{recommendedStep.title}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    {recommendedStep.description}
+                  </p>
+                  <p className="text-[10px] text-cyan-400/90 italic pt-1 border-t border-cyan-500/20">
+                    🎯 {recommendedStep.reason}
+                  </p>
                 </div>
               </div>
 
               <div className="pt-2">
                 <Link
-                  href="/student/revision"
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  href={recommendedStep.targetUrl}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-                  <span>Start Practice</span>
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
+                  <span>Execute Next Step</span>
                 </Link>
               </div>
             </div>
 
+          </div>
+
+          {/* Real Growth Tracker: Authentic Mastery Growth vs Gamification (Part 18) */}
+          <div className="rounded-3xl bg-slate-900/80 border border-emerald-500/25 p-6 backdrop-blur-xl shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold uppercase tracking-wider">
+                  <Award className="w-3 h-3 text-emerald-400" />
+                  <span>Real Growth Analytics</span>
+                </div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  Conceptual Mastery vs Gamification
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Gamification rewards consistent daily effort, while Real Growth measures how your verified subject comprehension expands over time.
+                </p>
+              </div>
+
+              <Link
+                href="/student/portfolio"
+                className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-white/10 transition flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <span>Full Learner Portfolio</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {subjects.slice(0, 3).map((sub) => {
+                const subMasteries = topicMasteries.filter((tm: any) => tm.subject_id === sub.id);
+                const hasMasteryData = subMasteries.length > 0;
+                const hasBaseline = baselineScores[sub.name] !== undefined;
+                const currentScore = hasMasteryData
+                  ? Math.round(subMasteries.reduce((sum: number, tm: any) => sum + Number(tm.mastery_score), 0) / subMasteries.length)
+                  : (hasBaseline ? baselineScores[sub.name] : 0);
+                const baseline = hasBaseline ? baselineScores[sub.name] : currentScore;
+                const delta = currentScore - baseline;
+
+                return (
+                  <div key={sub.id} className="p-4 rounded-2xl bg-slate-950/60 border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white">{sub.name}</span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        !hasMasteryData && !hasBaseline
+                          ? 'bg-slate-800 text-slate-400'
+                          : delta >= 0
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-amber-500/20 text-amber-300'
+                      }`}>
+                        {!hasMasteryData && !hasBaseline
+                          ? 'Pending Diagnostic'
+                          : delta >= 0
+                            ? `+${delta}% Growth`
+                            : `${delta}%`}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[11px] text-slate-400">
+                        <span>Baseline: <strong className="text-slate-300 font-mono">{hasBaseline ? `${baseline}%` : '--'}</strong></span>
+                        <span>Current: <strong className="text-emerald-400 font-mono">{hasMasteryData || hasBaseline ? `${currentScore}%` : '--'}</strong></span>
+                      </div>
+                      <div className="relative w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        {/* Baseline marker */}
+                        {hasBaseline && (
+                          <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-slate-400 z-10"
+                            style={{ left: `${baseline}%` }}
+                            title={`Diagnostic Baseline: ${baseline}%`}
+                          />
+                        )}
+                        {/* Current mastery fill */}
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-700"
+                          style={{ width: `${currentScore}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Lower Section: Subject Worlds Strip */}
@@ -463,8 +601,13 @@ export default async function StudentDashboardPage() {
                 const subAttempts = userAttempts.filter((a: any) => a.assessment?.subject_id === sub.id);
                 const passedAttempts = subAttempts.filter((a: any) => a.passed || (a.percentage && a.percentage >= 60));
                 const completedLevels = passedAttempts.length;
-                const totalLevels = Math.max(10, completedLevels + 4);
-                const mastery = Math.min(100, Math.round((completedLevels / totalLevels) * 100));
+                const subTopics = allTopics.filter((t: any) => t.subject_id === sub.id);
+                const totalLevels = Math.max(subTopics.length, 1);
+
+                const subMasteries = topicMasteries.filter((tm: any) => tm.subject_id === sub.id);
+                const mastery = subMasteries.length > 0
+                  ? Math.round(subMasteries.reduce((sum: number, tm: any) => sum + Number(tm.mastery_score), 0) / subMasteries.length)
+                  : Math.min(100, Math.round((completedLevels / totalLevels) * 100));
 
                 return (
                   <Link

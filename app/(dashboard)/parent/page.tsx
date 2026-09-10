@@ -15,7 +15,9 @@ import {
   Zap,
   Sparkles,
   TrendingUp,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck,
+  Lightbulb
 } from 'lucide-react';
 import { Profile } from '@/types/database.types';
 
@@ -75,19 +77,23 @@ export default async function ParentDashboardPage() {
     );
   }
 
-  // Fetch verified child's performance details
+  // Fetch verified child's performance, masteries, and life missions
   const firstChildId = children[0].id;
-  const [attRes, wtRes] = await Promise.all([
-    supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).limit(5),
-    supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active'),
+  const [attRes, wtRes, masteryRes, missionsRes] = await Promise.all([
+    supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).order('created_at', { ascending: false }).limit(5),
+    supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active').limit(2),
+    supabase.from('topic_mastery').select('*, topic:topics(*)').eq('student_id', firstChildId).order('mastery_score', { ascending: false }).limit(3),
+    supabase.from('mission_submissions').select('*').eq('student_id', firstChildId).eq('status', 'completed'),
   ]);
 
   const childQuizAttempts = attRes.data || [];
   const childWeakTopics = wtRes.data || [];
+  const childMasteries = (masteryRes.data || []) as any[];
+  const childMissions = (missionsRes.data || []) as any[];
   const activeChild = children[0];
   const childAvgScore = childQuizAttempts.length > 0
     ? Math.round(childQuizAttempts.reduce((acc: number, a: any) => acc + (a.percentage || 0), 0) / childQuizAttempts.length)
-    : 0;
+    : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -97,54 +103,39 @@ export default async function ParentDashboardPage() {
       <Navbar profile={userProfile} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 pb-28 md:pb-12">
-        {/* Header matching Screen 11 */}
-        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-indigo-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        {/* Header with Philosophy */}
+        <div className="relative rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-slate-900/90 via-amber-950/30 to-slate-900/90 border border-white/10 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-cyan-300 text-xs font-mono font-bold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold uppercase tracking-wider">
               <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-              <span>Parent Dashboard</span>
+              <span>Support, Not Pressure</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome, {userProfile.full_name || 'Guardian'}
+              {activeChild?.profile?.full_name ? `${activeChild.profile.full_name}'s Learning Journey` : 'Family Learning Companion'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Track your child&apos;s progress with ease.
+            <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
+              Nurture curiosity over test anxiety. Consistency, hands-on discovery, and persistence build lifelong thinkers.
             </p>
           </div>
-        </div>
 
-        {/* Student Progress Overview Bar matching Screen 11 */}
-        <div className="cosmic-card p-5 sm:p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-600/30 shrink-0">
-              {activeChild?.profile?.full_name?.charAt(0) || 'C'}
-            </div>
-            <div>
-              <h3 className="text-base font-black text-white">
-                {activeChild?.profile?.full_name || 'Cadet'}
-              </h3>
-              <div className="text-xs text-slate-400 font-medium">
-                {activeChild?.class?.name || 'Academic Class'} {activeChild?.section?.name ? `- Section ${activeChild.section.name}` : ''}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Overall Progress */}
-          <div className="w-full sm:w-64 space-y-1.5">
-            <div className="flex justify-between text-xs font-bold">
-              <span className="text-slate-400">Overall Progress</span>
-              <span className="text-cyan-400 font-mono">{childAvgScore}%</span>
-            </div>
-            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-white/5">
-              <div
-                className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full"
-                style={{ width: `${childAvgScore}%` }}
-              />
-            </div>
+          <div className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 text-right shrink-0">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Habit Consistency</span>
+            <span className="text-xl font-black text-amber-400 flex items-center justify-end gap-1">
+              <Flame className="w-5 h-5 text-orange-400" />
+              {activeChild?.streak_days || activeChild?.current_streak || 0} Day Streak
+            </span>
           </div>
         </div>
 
-        {/* 4 Telemetry Metrics matching Screen 11 */}
+        {/* Strict Child Privacy Guarantee */}
+        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs flex items-center gap-3 text-indigo-200">
+          <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
+          <span>
+            <strong>Psychological Safety Shield:</strong> Smart Edu never ranks children against classmates or displays stressful comparative percentiles. Private tutoring chats with Nova AI remain confidential between the student and AI companion to encourage authentic questions without fear of judgment.
+          </span>
+        </div>
+
+        {/* 4 Telemetry Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
@@ -152,7 +143,7 @@ export default async function ParentDashboardPage() {
               <Flame className="w-4 h-4 text-orange-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {activeChild?.current_streak || 0} Days
+              {activeChild?.streak_days || activeChild?.current_streak || 0} Days
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               Daily habit maintained
@@ -161,83 +152,111 @@ export default async function ParentDashboardPage() {
 
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Total XP Earned</span>
+              <span>Cadet Level</span>
               <Zap className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {activeChild?.total_points || 0}
+              Level {activeChild?.level || 1}
             </div>
             <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
-              Level {activeChild?.level || 1} Cadet
+              {activeChild?.total_points || activeChild?.xp || 0} XP Earned
             </span>
           </div>
 
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Weak Areas</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl sm:text-3xl font-black text-white">
-              {childWeakTopics.length}
-            </div>
-            <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
-              Flagged for revision
-            </span>
-          </div>
-
-          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Quizzes Taken</span>
+              <span>Life Missions</span>
               <Award className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {childQuizAttempts.length}
+              {childMissions.length}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
-              Completed assessments
+              Real-world activities
+            </span>
+          </div>
+
+          <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
+              <span>Core Fluency</span>
+              <TrendingUp className="w-4 h-4 text-cyan-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-white">
+              {childAvgScore !== null ? `${childAvgScore}%` : '--'}
+            </div>
+            <span className="text-[10px] text-cyan-400 font-semibold mt-1 inline-block">
+              {childAvgScore !== null ? 'Understanding index' : 'First assessment pending'}
             </span>
           </div>
         </div>
 
-        {/* 2-Column: Recent Assessments & Flagged Weak Topics */}
+        {/* At-Home Conversation Starters Card */}
+        <div className="cosmic-card p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-br from-slate-900/90 via-amber-950/20 to-slate-900/90 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base font-black text-white">
+                Tonight’s Conversation Starters (Encouragement Tips)
+              </h3>
+            </div>
+            <span className="text-xs text-amber-300 font-semibold">At Dinner or During Commute</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/5 space-y-1.5">
+              <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <span>💬</span> Connect Science to Real Life
+              </span>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                "Ask your child: 'Can you show me how friction works when sliding things across our kitchen floor?' Let them be the teacher and explain it to you!"
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/5 space-y-1.5">
+              <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                <span>🌱</span> Praise Persistence, Not Scores
+              </span>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                "Say: 'I noticed you kept trying on that tricky math topic even when it felt tough. That determination is what builds real genius.'"
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2-Column: Demonstrated Strengths & Concepts Ready for Encouragement */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Recent Quiz Performance */}
+          {/* Demonstrated Strengths Spotlight */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="cosmic-card p-6 rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-emerald-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-400" />
-                  <span>Recent Challenge Results</span>
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span>Demonstrated Strengths</span>
                 </h3>
-                <span className="text-xs text-slate-400">Score Telemetry</span>
+                <span className="text-xs text-emerald-400 font-mono font-bold">Celebrating Growth</span>
               </div>
 
-              {childQuizAttempts.length === 0 ? (
+              {childMasteries.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
-                  <p>No recent quiz attempts recorded yet.</p>
+                  <p>As your child completes quests, their top conceptual strengths will appear here.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {childQuizAttempts.map((att) => (
+                  {childMasteries.map((m: any) => (
                     <div
-                      key={att.id}
-                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                      key={m.id}
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-emerald-500/20 flex items-center justify-between gap-3"
                     >
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate">
-                          {att.assessment?.title || 'Quiz'}
+                      <div>
+                        <h4 className="text-xs font-bold text-white">
+                          {m.topic?.name || 'Concept Fluency'}
                         </h4>
-                        <span className="text-[11px] text-slate-400">
-                          Completed on {new Date(att.completed_at || att.created_at).toLocaleDateString()}
+                        <span className="text-[11px] text-emerald-300">
+                          Mastery Achieved ({m.mastery_score}%)
                         </span>
                       </div>
-
-                      <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${
-                        att.passed || att.score_percentage >= 60
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      }`}>
-                        {att.score_percentage}%
+                      <span className="text-xs px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Strong
                       </span>
                     </div>
                   ))}
@@ -246,41 +265,41 @@ export default async function ParentDashboardPage() {
             </div>
           </div>
 
-          {/* Weak Topics Attention Flag */}
+          {/* Concepts Ready for Gentle Encouragement */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="cosmic-card p-6 rounded-3xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-amber-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Concepts Requiring Attention</span>
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>Concepts Ready for Encouragement</span>
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                  Adaptive Engine
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+                  Positive Support
                 </span>
               </div>
 
               {childWeakTopics.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
-                  <p>No active weaknesses flagged. Your child is performing at grade level!</p>
+                  <p>No concepts currently flagged. Your child is progressing smoothly!</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {childWeakTopics.map((wt) => (
                     <div
                       key={wt.id}
-                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                      className="p-4 rounded-2xl bg-slate-800/60 border border-amber-500/20 flex items-center justify-between gap-3"
                     >
                       <div>
                         <h4 className="text-xs font-bold text-white">
                           {wt.topic?.name || 'Concept'}
                         </h4>
                         <span className="text-[11px] text-slate-400">
-                          {wt.incorrect_count} missed questions in recent tests
+                          Nova AI is providing visual analogies and guided practice
                         </span>
                       </div>
 
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                        {wt.accuracy_rate}% Accuracy
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        In Progress
                       </span>
                     </div>
                   ))}

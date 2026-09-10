@@ -36,9 +36,6 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
   const languages = [
     { code: 'EN', label: 'English' },
     { code: 'HI', label: 'Hindi (हिंदी)' },
-    { code: 'ES', label: 'Spanish (Español)' },
-    { code: 'FR', label: 'French (Français)' },
-    { code: 'DE', label: 'German (Deutsch)' },
   ];
 
   return (

@@ -100,26 +100,13 @@ function RevisionContent() {
       if (profRes.data) setProfile(profRes.data as Profile);
       if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
 
-      let activeList: any[] = [];
-      if (wtRes.data && wtRes.data.length > 0) {
-        activeList = wtRes.data;
-      } else if (topicsRes.data && topicsRes.data.length > 0) {
-        activeList = topicsRes.data.map((t: any) => ({
-          id: `starter-${t.id}`,
-          student_id: user.id,
-          topic_id: t.id,
-          accuracy_rate: 60,
-          incorrect_count: 2,
-          status: 'active',
-          topic: t,
-        }));
-      }
+      const activeList: any[] = wtRes.data || [];
 
       setWeakTopics(activeList as WeakTopic[]);
       const current = topicFilter
-        ? activeList.find((w: any) => w.topic_id === topicFilter) || activeList[0]
-        : activeList[0];
-      setSelectedTopic(current as WeakTopic);
+        ? activeList.find((w: any) => w.topic_id === topicFilter) || activeList[0] || null
+        : activeList[0] || null;
+      setSelectedTopic(current as WeakTopic | null);
       setLoading(false);
     }
 

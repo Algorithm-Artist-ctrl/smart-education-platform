@@ -68,11 +68,10 @@ export async function GET() {
         if (studentProf) {
           onboardingCompleted = Boolean(studentProf.onboarding_completed);
         } else {
-          // If profile table doesn't exist, assume completed if metadata says so
-          onboardingCompleted = Boolean(user.user_metadata?.onboarding_completed ?? true);
+          onboardingCompleted = Boolean(user.user_metadata?.onboarding_completed ?? false);
         }
       } catch {
-        onboardingCompleted = true;
+        onboardingCompleted = false;
       }
     }
 

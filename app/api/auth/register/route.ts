@@ -109,10 +109,10 @@ export async function POST(request: NextRequest) {
       });
 
       if (assignedRole === 'student') {
-        // Create base student_profile
+        // Create base student_profile with onboarding_completed: false to trigger Know Yourself onboarding
         await adminClient.from('student_profiles').upsert({
           id: createdUser.id,
-          onboarding_completed: true,
+          onboarding_completed: false,
           total_points: 0,
           coins: 50,
           level: 1,
@@ -160,12 +160,12 @@ export async function POST(request: NextRequest) {
       console.warn('Post-signup automatic sign-in warning:', signInErr);
     }
 
-    let redirectTo = '/student';
+    let redirectTo = '/onboarding';
     if (assignedRole === 'teacher') redirectTo = '/teacher';
     else if (assignedRole === 'parent') redirectTo = '/parent';
     else if (assignedRole === 'admin') redirectTo = '/admin';
     else if (assignedRole === 'super_admin') redirectTo = '/super-admin';
-    else redirectTo = '/student';
+    else redirectTo = '/onboarding';
 
     return NextResponse.json({
       success: true,
