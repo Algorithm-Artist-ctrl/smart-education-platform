@@ -96,9 +96,9 @@ export default async function StudentDashboardPage() {
     ? `Top ${rankPercentile}% In Class` 
     : `#${currentRank} In Class`;
 
-  // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans
+  // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts
   const todayStr = new Date().toISOString().split('T')[0];
-  const [questsRes, subjectsRes, weakTopicsRes, studyPlansRes] = await Promise.all([
+  const [questsRes, subjectsRes, weakTopicsRes, studyPlansRes, assessmentsRes, attemptsRes] = await Promise.all([
     supabase
       .from('quests')
       .select('*')
@@ -122,15 +122,35 @@ export default async function StudentDashboardPage() {
       .eq('plan_date', todayStr)
       .order('created_at', { ascending: true })
       .limit(3),
+    supabase
+      .from('assessments')
+      .select('id, title, duration_minutes, total_marks, subject_id')
+      .order('created_at', { ascending: true })
+      .limit(5),
+    supabase
+      .from('quiz_attempts')
+      .select('score, percentage, passed, assessment_id, assessment:assessments(subject_id)')
+      .eq('student_id', user.id),
   ]);
 
   const quests: Quest[] = questsRes.data || [];
   const subjects: Subject[] = subjectsRes.data || [];
   const weakTopics: WeakTopic[] = weakTopicsRes.data || [];
   const todayPlans: StudyPlan[] = studyPlansRes.data || [];
+  const defaultAssessments = assessmentsRes.data || [];
+  const userAttempts = attemptsRes.data || [];
 
   const primaryQuest: Quest | null = quests[0] || null;
   const primaryWeakTopic = weakTopics[0]?.topic?.name || null;
+  const firstAssessment = defaultAssessments[0] || null;
+
+  const questTargetUrl = primaryQuest?.target_id 
+    ? `/student/assessments/${primaryQuest.target_id}` 
+    : primaryQuest?.id 
+      ? `/student/assessments/${primaryQuest.id}`
+      : firstAssessment?.id
+        ? `/student/assessments/${firstAssessment.id}`
+        : '/student/map';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-slate-100 pb-20 md:pb-12 selection:bg-indigo-500/30 selection:text-indigo-200">
@@ -326,10 +346,10 @@ export default async function StudentDashboardPage() {
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-sm font-black text-white truncate">
-                        {primaryQuest?.title || 'Master Quadratic Equations'}
+                        {primaryQuest?.title || (firstAssessment ? `Diagnostic: ${firstAssessment.title}` : 'Curriculum Diagnostic Voyage')}
                       </h4>
                       <div className="text-[11px] text-indigo-300/80 font-medium">
-                        {primaryQuest?.subject_name || 'Mathematics'} • {primaryQuest?.duration_minutes || 20} min
+                        {primaryQuest?.subject_name || 'Mathematics'} • {primaryQuest?.duration_minutes || firstAssessment?.duration_minutes || 15} min
                       </div>
                     </div>
                   </div>
@@ -337,12 +357,14 @@ export default async function StudentDashboardPage() {
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold text-slate-300">
                       <span className="text-[11px] text-slate-400">Progress</span>
-                      <span className="font-mono text-cyan-400 font-bold">{primaryQuest?.progress_percent || 80}%</span>
+                      <span className="font-mono text-cyan-400 font-bold">
+                        {primaryQuest ? (primaryQuest.progress_percent || (primaryQuest.status === 'completed' ? 100 : 0)) : 0}%
+                      </span>
                     </div>
                     <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-white/5">
                       <div
                         className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full"
-                        style={{ width: `${primaryQuest?.progress_percent || 80}%` }}
+                        style={{ width: `${primaryQuest ? (primaryQuest.progress_percent || (primaryQuest.status === 'completed' ? 100 : 0)) : 0}%` }}
                       />
                     </div>
                   </div>
@@ -362,7 +384,7 @@ export default async function StudentDashboardPage() {
                 </div>
 
                 <Link
-                  href={primaryQuest ? `/student/assessments/${primaryQuest.id}` : '/student/revision'}
+                  href={questTargetUrl}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
                 >
                   <span>Continue</span>
@@ -397,7 +419,7 @@ export default async function StudentDashboardPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-slate-200 leading-relaxed mb-3">
-                  Hi <span className="font-bold text-white">{studentName}</span>! 👋 Want to practice 5 questions on your weak topic?
+                  Hi <span className="font-bold text-white">{studentName}</span>! 👋 Want to practice questions on {primaryWeakTopic || 'your current subjects'}?
                 </div>
               </div>
 
@@ -438,9 +460,11 @@ export default async function StudentDashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {subjects.map((sub, idx) => {
-                const completedLevels = idx === 0 ? 8 : idx === 1 ? 5 : 0;
-                const totalLevels = idx === 0 ? 12 : idx === 1 ? 10 : 10;
-                const mastery = Math.round((completedLevels / totalLevels) * 100);
+                const subAttempts = userAttempts.filter((a: any) => a.assessment?.subject_id === sub.id);
+                const passedAttempts = subAttempts.filter((a: any) => a.passed || (a.percentage && a.percentage >= 60));
+                const completedLevels = passedAttempts.length;
+                const totalLevels = Math.max(10, completedLevels + 4);
+                const mastery = Math.min(100, Math.round((completedLevels / totalLevels) * 100));
 
                 return (
                   <Link

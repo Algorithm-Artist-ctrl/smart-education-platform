@@ -155,12 +155,15 @@ export default function CareerGuidancePage() {
     setSaving(true);
 
     try {
-      await supabase.from('career_profiles').upsert({
-        student_id: user.id,
-        interests,
-        skills,
-        updated_at: new Date().toISOString(),
-      });
+      await supabase.from('career_profiles').upsert(
+        {
+          student_id: user.id,
+          interests,
+          skills,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'student_id' }
+      );
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {

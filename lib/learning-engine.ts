@@ -2,6 +2,7 @@
 // Smart Education Adaptive Learning & Diagnostic Analysis Engine
 
 import { SupabaseClient } from '@supabase/supabase-js';
+import { calculateLevel } from '@/lib/gamification-engine';
 
 export interface AssessmentSubmissionData {
   assessment_id: string;
@@ -118,15 +119,18 @@ export async function processAssessmentEvaluation(
       const totalIncorrect = (existing?.incorrect_count || 0) + incorrect;
       const overallAccuracy = Math.round(((totalAttempts - totalIncorrect) / totalAttempts) * 100);
 
-      await supabase.from('weak_topics').upsert({
-        student_id,
-        topic_id: topicId,
-        accuracy_rate: overallAccuracy,
-        total_attempts: totalAttempts,
-        incorrect_count: totalIncorrect,
-        status: 'active',
-        last_evaluated_at: endTime,
-      });
+      await supabase.from('weak_topics').upsert(
+        {
+          student_id,
+          topic_id: topicId,
+          accuracy_rate: overallAccuracy,
+          total_attempts: totalAttempts,
+          incorrect_count: totalIncorrect,
+          status: 'active',
+          last_evaluated_at: endTime,
+        },
+        { onConflict: 'student_id,topic_id' }
+      );
 
       // Find recommended learning content for this weak topic
       const { data: content } = await supabase
@@ -190,17 +194,33 @@ export async function processAssessmentEvaluation(
 
   if (studentProfile) {
     const newPoints = (studentProfile.total_points || 0) + xpEarned;
-    const newLevel = Math.floor(newPoints / 250) + 1;
+    const { level: newLevel } = calculateLevel(newPoints);
 
     await supabase
       .from('student_profiles')
       .update({
         total_points: newPoints,
         level: newLevel,
-        current_streak: Math.max(1, studentProfile.current_streak || 1),
+        current_streak: Math.max(1, (studentProfile.current_streak || 0) + 1),
         updated_at: endTime,
       })
       .eq('id', student_id);
+
+    // Auto-complete any active quest targeting this assessment
+    try {
+      await supabase
+        .from('quests')
+        .update({
+          status: 'completed',
+          progress_percent: 100,
+          completed_at: endTime,
+        })
+        .eq('student_id', student_id)
+        .eq('target_id', assessment_id)
+        .neq('status', 'completed');
+    } catch (qErr) {
+      console.warn('Quest completion auto-update warning:', qErr);
+    }
   }
 
   // 6. Award Badges

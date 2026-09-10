@@ -55,13 +55,19 @@ export default async function AdminDashboardPage() {
     classesRes,
     subjectsRes,
     institutionsRes,
-    assessmentsRes
+    assessmentsRes,
+    studentsCountRes,
+    teachersCountRes,
+    attemptsCountRes
   ] = await Promise.all([
     supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(20),
     supabase.from('classes').select('*, institution:institutions(*)'),
     supabase.from('subjects').select('*'),
     supabase.from('institutions').select('*').limit(1),
     supabase.from('assessments').select('*'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher'),
+    supabase.from('quiz_attempts').select('*', { count: 'exact', head: true }),
   ]);
 
   const allUsers = (profilesRes.data || []) as Profile[];
@@ -70,9 +76,9 @@ export default async function AdminDashboardPage() {
   const institution = institutionsRes.data?.[0] as Institution | undefined;
   const assessments = assessmentsRes.data || [];
 
-  const studentsCount = allUsers.filter((u) => u.role === 'student').length;
-  const teachersCount = allUsers.filter((u) => u.role === 'teacher').length;
-  const parentsCount = allUsers.filter((u) => u.role === 'parent').length;
+  const studentsCount = studentsCountRes.count ?? allUsers.filter((u) => u.role === 'student').length;
+  const teachersCount = teachersCountRes.count ?? allUsers.filter((u) => u.role === 'teacher').length;
+  const totalAttempts = attemptsCountRes.count ?? 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -90,7 +96,7 @@ export default async function AdminDashboardPage() {
               <span>Admin Dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome, Admin
+              Welcome, {userProfile.full_name || 'Administrator'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
               Platform overview and key metrics.
@@ -114,7 +120,7 @@ export default async function AdminDashboardPage() {
               <GraduationCap className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {studentsCount || 320}
+              {studentsCount}
             </div>
             <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
               Enrolled Cadets
@@ -128,7 +134,7 @@ export default async function AdminDashboardPage() {
               <Users className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {teachersCount || 24}
+              {teachersCount}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               Faculty Members
@@ -142,24 +148,24 @@ export default async function AdminDashboardPage() {
               <BookOpen className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {subjects.length || 12}
+              {subjects.length}
             </div>
             <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
               Curriculum Tracks
             </span>
           </div>
 
-          {/* Platform Usage */}
+          {/* Platform Challenges */}
           <div className="cosmic-card p-5 rounded-2xl border border-white/10 bg-slate-900/70 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Platform Usage</span>
+              <span>Assessments</span>
               <Activity className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              95%
+              {assessments.length}
             </div>
             <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
-              High Engagement
+              {totalAttempts} Quizzes Taken
             </span>
           </div>
         </div>

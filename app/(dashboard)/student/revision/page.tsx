@@ -41,6 +41,7 @@ function RevisionContent() {
   const [contentList, setContentList] = useState<LearningContent[]>([]);
   const [topicAssessments, setTopicAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNotes, setShowNotes] = useState(false);
 
   // Revision Arena Tabs: weak-topics | flashcards | past-papers | mini-tests
   const [activeTab, setActiveTab] = useState<'weak-topics' | 'flashcards' | 'past-papers' | 'mini-tests'>('weak-topics');
@@ -82,7 +83,7 @@ function RevisionContent() {
         return;
       }
 
-      const [profRes, studRes, wtRes] = await Promise.all([
+      const [profRes, studRes, wtRes, topicsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('student_profiles').select('*').eq('id', user.id).single(),
         supabase
@@ -90,57 +91,30 @@ function RevisionContent() {
           .select('*, topic:topics(*, subject:subjects(*))')
           .eq('student_id', user.id)
           .order('accuracy_rate', { ascending: true }),
+        supabase
+          .from('topics')
+          .select('*, subject:subjects(*)')
+          .limit(3),
       ]);
 
       if (profRes.data) setProfile(profRes.data as Profile);
       if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
 
-      const defaultWeakList: any[] = [
-        {
-          id: 'wt-quad-eq',
+      let activeList: any[] = [];
+      if (wtRes.data && wtRes.data.length > 0) {
+        activeList = wtRes.data;
+      } else if (topicsRes.data && topicsRes.data.length > 0) {
+        activeList = topicsRes.data.map((t: any) => ({
+          id: `starter-${t.id}`,
           student_id: user.id,
-          topic_id: 'topic-quad-eq',
-          accuracy_rate: 62,
-          incorrect_count: 5,
-          status: 'active',
-          topic: {
-            id: 'topic-quad-eq',
-            name: 'Quadratic Equations',
-            description: 'Solving ax² + bx + c = 0 using factoring, square roots, and the quadratic formula.',
-            subject: { name: 'Mathematics' },
-          },
-        },
-        {
-          id: 'wt-motion',
-          student_id: user.id,
-          topic_id: 'topic-motion',
-          accuracy_rate: 78,
+          topic_id: t.id,
+          accuracy_rate: 60,
           incorrect_count: 2,
           status: 'active',
-          topic: {
-            id: 'topic-motion',
-            name: 'Laws of Motion',
-            description: 'Inertia, F = ma, action-reaction forces, and momentum.',
-            subject: { name: 'Physics' },
-          },
-        },
-        {
-          id: 'wt-data-struct',
-          student_id: user.id,
-          topic_id: 'topic-data-struct',
-          accuracy_rate: 70,
-          incorrect_count: 3,
-          status: 'active',
-          topic: {
-            id: 'topic-data-struct',
-            name: 'Data Structures',
-            description: 'Arrays, linked lists, stacks, queues, and tree traversal.',
-            subject: { name: 'Computer Science' },
-          },
-        },
-      ];
+          topic: t,
+        }));
+      }
 
-      const activeList = (wtRes.data && wtRes.data.length > 0) ? wtRes.data : defaultWeakList;
       setWeakTopics(activeList as WeakTopic[]);
       const current = topicFilter
         ? activeList.find((w: any) => w.topic_id === topicFilter) || activeList[0]
@@ -315,7 +289,7 @@ function RevisionContent() {
 
                     <div className="flex flex-wrap items-center gap-3 pt-2">
                       <Link
-                        href={`/student/subjects`}
+                        href={topicAssessments.length > 0 ? `/student/assessments/${topicAssessments[0].id}` : `/student/subjects/${selectedTopic?.topic?.subject_id || ''}`}
                         className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 active:scale-95 transition-all flex items-center gap-1.5"
                       >
                         <span>Practice Now</span>
@@ -324,7 +298,7 @@ function RevisionContent() {
 
                       <button
                         type="button"
-                        onClick={() => {}}
+                        onClick={() => setShowNotes(true)}
                         className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 font-bold text-xs transition"
                       >
                         View Notes
@@ -375,12 +349,13 @@ function RevisionContent() {
                               </div>
                             </div>
 
-                            <Link
-                              href="/student/subjects"
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTopic(wt)}
                               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white border border-white/10 hover:border-indigo-500 text-xs font-bold transition-all shadow-sm"
                             >
                               Practice
-                            </Link>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -492,6 +467,55 @@ function RevisionContent() {
         studentName={profile?.full_name?.split(' ')[0] || 'Explorer'}
         level={studentProfile?.level || 1}
       />
+
+      {/* Study Notes Modal */}
+      {showNotes && selectedTopic && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="cosmic-card w-full max-w-lg rounded-3xl border border-white/10 bg-slate-900 p-6 sm:p-8 shadow-2xl relative space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-cyan-400" />
+                <h3 className="text-base font-black text-white">
+                  {selectedTopic.topic?.name} - Study Notes
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNotes(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold px-2"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-300 space-y-3 max-h-96 overflow-y-auto pr-1">
+              <div className="p-3.5 rounded-2xl bg-slate-800/60 border border-white/5 space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">
+                  Core Concept & Summary
+                </span>
+                <p className="leading-relaxed">
+                  {contentList.length > 0 && contentList[0]?.body_markdown
+                    ? contentList[0].body_markdown
+                    : selectedTopic.topic?.description || 'Review the core principles and solve sample exercises to improve mastery on this topic.'}
+                </p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-500/20 text-[11px] text-indigo-300">
+                💡 Tip: Ask Nova AI anytime if you want an intuitive step-by-step breakdown or hint for problems on this topic!
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowNotes(false)}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MobileBottomNav />
     </div>

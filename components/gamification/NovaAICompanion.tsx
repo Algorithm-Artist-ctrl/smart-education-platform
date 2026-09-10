@@ -1,9 +1,9 @@
 // components/gamification/NovaAICompanion.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Sparkles, X, Send, Bot, ArrowRight, Lightbulb, MessageSquare } from 'lucide-react';
+import { Sparkles, X, Send, Bot, ArrowRight, Lightbulb, MessageSquare, Loader2 } from 'lucide-react';
 
 interface NovaAICompanionProps {
   weakTopicName?: string | null;
@@ -17,7 +17,7 @@ interface NovaAICompanionProps {
 
 export default function NovaAICompanion({
   weakTopicName,
-  studentName = 'Learner',
+  studentName = 'Cadet',
   recommendedSubject = 'Mathematics',
   level = 1,
   compact = false,
@@ -25,6 +25,8 @@ export default function NovaAICompanion({
   className = '',
 }: NovaAICompanionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleOpen = () => setIsOpen(true);
@@ -36,31 +38,84 @@ export default function NovaAICompanion({
     {
       sender: 'nova',
       text: weakTopicName
-        ? `Hi ${studentName}! I noticed you could boost your score on "${weakTopicName}". Ready to try 5 quick practice questions?`
-        : `Hi ${studentName}! I'm Nova, your AI study mentor. Ask me anything about your lessons, concepts, or homework!`,
+        ? `Hi ${studentName}! I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
+        : `Greetings ${studentName}! I'm Nova, your AI study mentor. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`,
     },
   ]);
   const [inputVal, setInputVal] = useState('');
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputVal.trim()) return;
-
-    const userText = inputVal.trim();
-    setMessages((prev) => [...prev, { sender: 'user', text: userText }]);
-    setInputVal('');
-
-    // Simulated contextual AI assistant response
-    setTimeout(() => {
-      let reply = `That's a fantastic question about ${recommendedSubject}! Let's break it down into easy visual steps. First, recall the core formula, then solve for the unknown variable.`;
-      if (userText.toLowerCase().includes('quadratic') || userText.toLowerCase().includes('equation')) {
-        reply = `For quadratic equations ax² + bx + c = 0, remember the quadratic formula x = (-b ± √(b² - 4ac)) / (2a). Always check the discriminant b² - 4ac first to find how many real roots exist!`;
-      } else if (userText.toLowerCase().includes('streak') || userText.toLowerCase().includes('xp')) {
-        reply = `To keep your streak alive and earn +50 XP today, complete your daily quest or take 1 quiz in your active subject world!`;
-      }
-      setMessages((prev) => [...prev, { sender: 'nova', text: reply }]);
-    }, 600);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen, isLoading]);
+
+  const handleSend = async (textToSend?: string) => {
+    const userText = (textToSend || inputVal).trim();
+    if (!userText || isLoading) return;
+
+    const newMessages = [...messages, { sender: 'user' as const, text: userText }];
+    setMessages(newMessages);
+    setInputVal('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/ai/nova', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages.map((m) => ({
+            role: m.sender === 'user' ? 'user' : 'model',
+            text: m.text,
+          })),
+          studentContext: {
+            studentName,
+            level,
+            currentSubject: recommendedSubject,
+            weakTopics: weakTopicName ? [weakTopicName] : [],
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.reply) {
+        setMessages((prev) => [...prev, { sender: 'nova', text: data.reply }]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: 'nova',
+            text: data.error || "I'm having trouble retrieving that from my knowledge cortex right now. Please try asking again!",
+          },
+        ]);
+      }
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: 'nova',
+          text: "I couldn't reach the server right now. Please check your network connection and try again!",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend();
+  };
+
+  const quickPrompts = [
+    `Explain ${recommendedSubject} key concepts simply`,
+    `Give me a practice problem on ${weakTopicName || recommendedSubject}`,
+    `How do I earn XP and level up fast?`,
+  ];
 
   return (
     <>
@@ -119,7 +174,7 @@ export default function NovaAICompanion({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-40 p-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 shadow-2xl shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 group border border-cyan-400/40"
+          className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-40 p-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 shadow-2xl shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 group border border-cyan-400/40 cursor-pointer"
           title="Chat with Nova AI Mentor"
         >
           <div className="w-9 h-9 rounded-full relative overflow-hidden bg-slate-950 border border-white/20">
@@ -139,10 +194,10 @@ export default function NovaAICompanion({
 
       {/* 3. Interactive AI Mentor Dialog Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="cosmic-card rounded-3xl border border-cyan-500/30 bg-slate-900 shadow-2xl shadow-cyan-950/60 w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="cosmic-card rounded-3xl border border-cyan-500/30 bg-slate-900 shadow-2xl shadow-cyan-950/60 w-full max-w-lg overflow-hidden flex flex-col max-h-[88vh] sm:max-h-[82vh]">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-slate-900/90">
+            <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-slate-900/95">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl relative overflow-hidden bg-slate-950 border border-cyan-500/40 shadow-md shadow-cyan-500/30">
                   <Image
@@ -165,21 +220,21 @@ export default function NovaAICompanion({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-3.5 min-h-[260px]">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 min-h-[280px]">
               {messages.map((msg, i) => (
                 <div
                   key={i}
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[82%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap ${
                       msg.sender === 'user'
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-600/20'
                         : 'bg-slate-800/90 text-slate-200 border border-white/10'
@@ -189,25 +244,56 @@ export default function NovaAICompanion({
                   </div>
                 </div>
               ))}
+
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl px-4 py-3 text-xs bg-slate-800/90 text-cyan-300 border border-cyan-500/20 flex items-center gap-2.5 shadow-md">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                    <span>Nova is preparing your answer...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Prompts */}
+            <div className="px-4 py-2 border-t border-white/5 bg-slate-950/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {quickPrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSend(prompt)}
+                  disabled={isLoading}
+                  className="whitespace-nowrap px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-slate-300 hover:text-white transition cursor-pointer disabled:opacity-50"
+                >
+                  {prompt}
+                </button>
+              ))}
             </div>
 
             {/* Prompt Form */}
             <form
-              onSubmit={handleSend}
-              className="p-3.5 border-t border-white/10 bg-slate-900/90 flex items-center gap-2"
+              onSubmit={handleFormSubmit}
+              className="p-3.5 border-t border-white/10 bg-slate-900/95 flex items-center gap-2"
             >
               <input
                 type="text"
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder="Ask Nova about a concept, formula, or problem..."
-                className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 transition-all"
+                disabled={isLoading}
+                className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 transition-all disabled:opacity-50"
               />
               <button
                 type="submit"
-                className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white flex items-center justify-center shadow-md shadow-cyan-500/25 transition-all shrink-0"
+                disabled={!inputVal.trim() || isLoading}
+                className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white flex items-center justify-center shadow-md shadow-cyan-500/25 transition-all shrink-0 cursor-pointer disabled:opacity-50"
               >
-                <Send className="w-4 h-4" />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </button>
             </form>
           </div>

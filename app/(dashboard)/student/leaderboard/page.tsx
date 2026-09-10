@@ -53,7 +53,7 @@ export default function LeaderboardPage() {
         supabase.from('student_profiles').select('*').eq('id', user.id).single(),
         supabase
           .from('student_profiles')
-          .select('id, total_points, level, current_streak, profiles(id, full_name, avatar_url)')
+          .select('id, total_points, level, current_streak, profiles:profiles!student_profiles_id_fkey(id, full_name, avatar_url)')
           .order('total_points', { ascending: false })
           .limit(25),
       ]);
@@ -62,16 +62,19 @@ export default function LeaderboardPage() {
       if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
 
       if (allStudRes.data && allStudRes.data.length > 0) {
-        const mapped: LeaderboardUser[] = allStudRes.data.map((item: any, index: number) => ({
-          id: item.id,
-          rank: index + 1,
-          name: item.profiles?.full_name || `Cadet #${item.id.slice(0, 4)}`,
-          avatarUrl: item.profiles?.avatar_url,
-          totalPoints: item.total_points || 0,
-          level: item.level || 1,
-          streakDays: item.current_streak || 0,
-          isCurrentUser: item.id === user.id,
-        }));
+        const mapped: LeaderboardUser[] = allStudRes.data.map((item: any, index: number) => {
+          const prof = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
+          return {
+            id: item.id,
+            rank: index + 1,
+            name: prof?.full_name || `Cadet #${item.id.slice(0, 4)}`,
+            avatarUrl: prof?.avatar_url,
+            totalPoints: item.total_points || 0,
+            level: item.level || 1,
+            streakDays: item.current_streak || 0,
+            isCurrentUser: item.id === user.id,
+          };
+        });
         setLeaderboard(mapped);
       } else {
         // Only current student is in the system

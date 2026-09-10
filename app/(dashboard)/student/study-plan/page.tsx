@@ -35,6 +35,7 @@ export default function StudyPlanPage() {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const [profile, setProfile] = useState<Profile | null>(null);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [plans, setPlans] = useState<StudyPlan[]>([]);
@@ -54,6 +55,13 @@ export default function StudyPlanPage() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  const handlePrevMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1));
+  };
+  const handleNextMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1));
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -246,17 +254,17 @@ export default function StudyPlanPage() {
               <div className="flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => {}}
+                  onClick={handlePrevMonth}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <h3 className="text-sm font-black text-white tracking-wide">
-                  September 2026
+                  {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </h3>
                 <button
                   type="button"
-                  onClick={() => {}}
+                  onClick={handleNextMonth}
                   className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -274,28 +282,48 @@ export default function StudyPlanPage() {
                 <span>Sa</span>
               </div>
 
-              {/* Month Dates Grid (Sept 2026 starts on Tuesday, 30 days) */}
+              {/* Month Dates Grid dynamically computed */}
               <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold">
-                <span className="py-1 text-slate-600">30</span>
-                <span className="py-1 text-slate-600">31</span>
-                {[...Array(30)].map((_, i) => {
-                  const day = i + 1;
-                  const isSelected = day === 9; // 9 Sep in reference
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => {}}
-                      className={`py-1.5 rounded-xl transition-all flex items-center justify-center ${
-                        isSelected
-                          ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/30'
-                          : 'text-slate-300 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  );
-                })}
+                {(() => {
+                  const currentYear = calendarDate.getFullYear();
+                  const currentMonthIdx = calendarDate.getMonth();
+                  const firstDay = new Date(currentYear, currentMonthIdx, 1).getDay();
+                  const daysCount = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
+                  const prevMonthDaysCount = new Date(currentYear, currentMonthIdx, 0).getDate();
+
+                  const cells = [];
+                  // Padding from previous month
+                  for (let p = 0; p < firstDay; p++) {
+                    const dayNum = prevMonthDaysCount - firstDay + 1 + p;
+                    cells.push(
+                      <span key={`prev-${p}`} className="py-1 text-slate-600">
+                        {dayNum}
+                      </span>
+                    );
+                  }
+
+                  // Days of current month
+                  for (let d = 1; d <= daysCount; d++) {
+                    const dStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const isSelected = selectedDate === dStr;
+                    cells.push(
+                      <button
+                        key={`cur-${d}`}
+                        type="button"
+                        onClick={() => setSelectedDate(dStr)}
+                        className={`py-1.5 rounded-xl transition-all flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/30'
+                            : 'text-slate-300 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  }
+
+                  return cells;
+                })()}
               </div>
             </div>
 
@@ -304,30 +332,73 @@ export default function StudyPlanPage() {
               <div className="flex items-center justify-between pb-2 border-b border-white/5">
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400">
-                    Today
+                    Missions
                   </h4>
-                  <div className="text-[11px] text-slate-400 font-medium">Mon, 9 Sep</div>
+                  <div className="text-[11px] text-slate-400 font-medium">
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
                 </div>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 font-bold border border-indigo-500/20">
-                  4 Tasks
+                  {plans.length} Tasks
                 </span>
               </div>
 
               <div className="space-y-2">
-                {[
-                  { title: 'Math Practice', time: '10:00 AM', color: 'border-l-blue-500' },
-                  { title: 'Physics Revision', time: '12:00 PM', color: 'border-l-cyan-500' },
-                  { title: 'Complete Assignment', time: '04:00 PM', color: 'border-l-indigo-500' },
-                  { title: 'Quick Quiz', time: '07:00 PM', color: 'border-l-amber-500' },
-                ].map((t) => (
-                  <div
-                    key={t.title}
-                    className={`p-3 rounded-2xl bg-slate-800/50 border border-white/5 border-l-4 ${t.color} flex items-center justify-between text-xs`}
-                  >
-                    <span className="font-bold text-white">{t.title}</span>
-                    <span className="text-[11px] font-mono text-slate-400">{t.time}</span>
+                {plans.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-xs">
+                    <p>No missions scheduled for this date.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      className="text-cyan-400 hover:underline font-bold mt-2 inline-flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Mission</span>
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  plans.map((p) => (
+                    <div
+                      key={p.id}
+                      className={`p-3 rounded-2xl bg-slate-800/50 border border-white/5 border-l-4 ${
+                        p.status === 'completed'
+                          ? 'border-l-emerald-500 opacity-60'
+                          : p.priority === 'urgent'
+                          ? 'border-l-rose-500'
+                          : p.priority === 'high'
+                          ? 'border-l-amber-500'
+                          : 'border-l-blue-500'
+                      } flex items-center justify-between text-xs`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleTaskComplete(p)}
+                          className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition ${
+                            p.status === 'completed'
+                              ? 'bg-emerald-500 border-emerald-400 text-white'
+                              : 'border-white/20 hover:border-white/40'
+                          }`}
+                        >
+                          {p.status === 'completed' && <Check className="w-3 h-3" />}
+                        </button>
+                        <span className={`font-bold text-white truncate ${p.status === 'completed' ? 'line-through text-slate-400' : ''}`}>
+                          {p.title}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-mono text-slate-400">{p.duration_minutes || 20}m</span>
+                        <button
+                          type="button"
+                          onClick={() => deleteTask(p.id)}
+                          className="text-slate-500 hover:text-rose-400 text-sm font-bold px-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

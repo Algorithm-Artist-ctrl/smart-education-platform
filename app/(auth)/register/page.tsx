@@ -64,13 +64,15 @@ export default function RegisterPage() {
 
       if (data.success) {
         if (data.hasSession) {
-          window.location.href = data.redirectTo || (role === 'student' ? '/onboarding' : `/${role}`);
+          window.location.href = data.redirectTo || (role === 'student' ? '/student' : `/${role}`);
           return;
         } else {
           setSuccessMsg(
-            'Registration successful! Please check your email inbox to confirm your account before logging in.'
+            'Account created successfully! Redirecting to login...'
           );
-          setLoading(false);
+          setTimeout(() => {
+            window.location.href = `/login?registered=true&email=${encodeURIComponent(email.trim())}`;
+          }, 1200);
           return;
         }
       } else {

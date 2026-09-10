@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NextResponse, type NextRequest } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName, role } = await request.json();
@@ -25,25 +27,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Supabase configuration is missing in the hosting environment. Please add NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY to your Render Dashboard Environment settings, then redeploy.',
-          code: 'CONFIG_MISSING',
-        },
-        { status: 500 }
-      );
-    }
-
-    const supabase = await createClient();
+    const adminClient = createAdminClient();
     let createdUser = null;
 
     // 1. Primary Strategy: Use admin client to create pre-confirmed user
-    // This avoids email rate limits (429) and email delivery delays
+    // This ensures new users can immediately log in without unconfigured SMTP email bottlenecks
     try {
-      const adminClient = createAdminClient();
       const { data: adminData, error: adminError } = await adminClient.auth.admin.createUser({
         email: cleanEmail,
         password,
@@ -70,7 +59,7 @@ export async function POST(request: NextRequest) {
     } catch (adminErr: any) {
       console.warn('Admin user creation fallback to standard signUp:', adminErr.message);
 
-      // Fallback Strategy: Standard signUp
+      const supabase = await createClient();
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
         password,
@@ -109,26 +98,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Insert into profiles & student_profiles if tables exist
+    // 2. Guarantee profile and initial data creation using adminClient (bypassing initial anon RLS)
     try {
-      await supabase.from('profiles').upsert({
+      await adminClient.from('profiles').upsert({
         id: createdUser.id,
         email: cleanEmail,
         full_name: cleanName,
         role: assignedRole,
+        updated_at: new Date().toISOString(),
       });
 
       if (assignedRole === 'student') {
-        await supabase.from('student_profiles').upsert({
+        // Create base student_profile
+        await adminClient.from('student_profiles').upsert({
           id: createdUser.id,
-          onboarding_completed: false,
+          onboarding_completed: true,
+          total_points: 0,
+          coins: 50,
+          level: 1,
+          current_streak: 0,
+          learning_goals: [
+            'Master Foundations in Mathematics',
+            'Learn Logic and Problem Solving',
+            'Daily Active Study Routine',
+          ],
+          updated_at: new Date().toISOString(),
+        });
+
+        // Initialize starter diagnostic quest pointing to real assessment
+        await adminClient.from('quests').insert({
+          student_id: createdUser.id,
+          title: 'Master Quadratic Equations',
+          subject_name: 'Mathematics',
+          duration_minutes: 20,
+          xp_reward: 150,
+          coins_reward: 20,
+          progress_percent: 0,
+          status: 'in_progress',
+          quest_type: 'assessment',
+          target_id: 'd0000000-0000-0000-0000-000000000001',
+          created_at: new Date().toISOString(),
         });
       }
-    } catch {
-      // Ignored if tables are not yet created in PostgreSQL
+    } catch (dbErr: any) {
+      console.warn('PostgreSQL initial profile provisioning warning:', dbErr.message);
     }
 
-    // 3. Automatically sign in to issue session cookie
+    // 3. Automatically sign in on server to issue valid session cookies
+    const supabase = await createClient();
     let hasSession = false;
     try {
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -148,7 +165,7 @@ export async function POST(request: NextRequest) {
     else if (assignedRole === 'parent') redirectTo = '/parent';
     else if (assignedRole === 'admin') redirectTo = '/admin';
     else if (assignedRole === 'super_admin') redirectTo = '/super-admin';
-    else redirectTo = '/onboarding';
+    else redirectTo = '/student';
 
     return NextResponse.json({
       success: true,

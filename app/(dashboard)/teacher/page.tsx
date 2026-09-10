@@ -106,7 +106,7 @@ export default async function TeacherDashboardPage() {
               <span>Teacher Dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome, {userProfile.full_name || 'Dr. Priya Verma'}
+              Welcome, {userProfile.full_name || 'Faculty Mentor'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
               Here&apos;s what&apos;s happening with your classes today.
@@ -131,7 +131,7 @@ export default async function TeacherDashboardPage() {
               <BookOpen className="w-4 h-4 text-blue-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {classes.length || 2}
+              {classes.length}
             </div>
             <span className="text-[10px] text-blue-400 font-semibold mt-1 inline-block">
               Active Sections
@@ -145,7 +145,7 @@ export default async function TeacherDashboardPage() {
               <Users className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {students.length || 48}
+              {students.length}
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               Enrolled Cadets
@@ -159,7 +159,7 @@ export default async function TeacherDashboardPage() {
               <FileCheck className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {assignments.length || 12}
+              {assignments.length}
             </div>
             <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
               Published Quests
@@ -173,7 +173,7 @@ export default async function TeacherDashboardPage() {
               <Clock className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {pendingSubmissions.length || 5}
+              {pendingSubmissions.length}
             </div>
             <span className="text-[10px] text-amber-400 font-semibold mt-1 inline-block">
               Requires Grading

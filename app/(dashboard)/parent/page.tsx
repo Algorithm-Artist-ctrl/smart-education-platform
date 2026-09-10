@@ -85,6 +85,9 @@ export default async function ParentDashboardPage() {
   const childQuizAttempts = attRes.data || [];
   const childWeakTopics = wtRes.data || [];
   const activeChild = children[0];
+  const childAvgScore = childQuizAttempts.length > 0
+    ? Math.round(childQuizAttempts.reduce((acc: number, a: any) => acc + (a.percentage || 0), 0) / childQuizAttempts.length)
+    : 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -102,7 +105,7 @@ export default async function ParentDashboardPage() {
               <span>Parent Dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Welcome, {userProfile.full_name || 'Rajesh Sharma'}
+              Welcome, {userProfile.full_name || 'Guardian'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
               Track your child&apos;s progress with ease.
@@ -114,28 +117,28 @@ export default async function ParentDashboardPage() {
         <div className="cosmic-card p-5 sm:p-6 rounded-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 border border-indigo-400/40 flex items-center justify-center font-black text-white text-base shadow-lg shadow-indigo-600/30 shrink-0">
-              {activeChild?.profile?.full_name?.charAt(0) || 'A'}
+              {activeChild?.profile?.full_name?.charAt(0) || 'C'}
             </div>
             <div>
               <h3 className="text-base font-black text-white">
-                {activeChild?.profile?.full_name || 'Aarav Sharma'}
+                {activeChild?.profile?.full_name || 'Cadet'}
               </h3>
               <div className="text-xs text-slate-400 font-medium">
-                {activeChild?.class?.name || 'Grade 10'} - Section {activeChild?.section?.name || 'Section A'}
+                {activeChild?.class?.name || 'Academic Class'} {activeChild?.section?.name ? `- Section ${activeChild.section.name}` : ''}
               </div>
             </div>
           </div>
 
-          {/* Right: Overall Progress 78% */}
+          {/* Right: Overall Progress */}
           <div className="w-full sm:w-64 space-y-1.5">
             <div className="flex justify-between text-xs font-bold">
               <span className="text-slate-400">Overall Progress</span>
-              <span className="text-cyan-400 font-mono">78%</span>
+              <span className="text-cyan-400 font-mono">{childAvgScore}%</span>
             </div>
             <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-white/5">
               <div
                 className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 rounded-full"
-                style={{ width: '78%' }}
+                style={{ width: `${childAvgScore}%` }}
               />
             </div>
           </div>
@@ -149,7 +152,7 @@ export default async function ParentDashboardPage() {
               <Flame className="w-4 h-4 text-orange-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {activeChild?.current_streak || 3} Days
+              {activeChild?.current_streak || 0} Days
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold mt-1 inline-block">
               Daily habit maintained
@@ -162,10 +165,10 @@ export default async function ParentDashboardPage() {
               <Zap className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-white">
-              {activeChild?.total_points || 350}
+              {activeChild?.total_points || 0}
             </div>
             <span className="text-[10px] text-indigo-400 font-semibold mt-1 inline-block">
-              Level {activeChild?.level || 2} Cadet
+              Level {activeChild?.level || 1} Cadet
             </span>
           </div>
 

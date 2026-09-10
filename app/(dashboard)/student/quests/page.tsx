@@ -64,14 +64,14 @@ export default function QuestsPage() {
     try {
       // Optimistic update
       setQuests((prev) =>
-        prev.map((q) => (q.id === quest.id ? { ...q, is_claimed: true } : q))
+        prev.map((q) => (q.id === quest.id ? { ...q, is_claimed: true, status: 'completed', completed_at: new Date().toISOString() } : q))
       );
 
       // Increment student coins and XP
       if (studentProfile) {
         const rewardCoins = quest.coin_reward ?? quest.coins_reward ?? 25;
         const newCoins = (studentProfile.coins ?? 100) + rewardCoins;
-        const newXp = (studentProfile.xp ?? studentProfile.total_points ?? 0) + quest.xp_reward;
+        const newXp = (studentProfile.total_points ?? studentProfile.xp ?? 0) + quest.xp_reward;
         setStudentProfile({
           ...studentProfile,
           coins: newCoins,
@@ -83,7 +83,7 @@ export default function QuestsPage() {
           .from('student_profiles')
           .update({
             coins: newCoins,
-            xp: newXp,
+            total_points: newXp,
           })
           .eq('id', profile.id);
       }
@@ -91,7 +91,11 @@ export default function QuestsPage() {
       // Mark quest claimed
       await supabase
         .from('quests')
-        .update({ is_claimed: true })
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          progress_percent: 100
+        })
         .eq('id', quest.id);
     } catch (err) {
       console.error('Failed to claim quest:', err);
@@ -209,13 +213,16 @@ export default function QuestsPage() {
               const totalProg = quest.progress_total ?? 100;
               const percent = Math.min(100, Math.round((currentProg / Math.max(totalProg, 1)) * 100));
 
+              const isQuestClaimed = quest.is_claimed || (quest.status === 'completed' && Boolean(quest.completed_at));
+              const isQuestCompleted = quest.is_completed || quest.status === 'completed' || percent >= 100;
+
               return (
                 <div
                   key={quest.id}
                   className={`cosmic-card p-6 rounded-3xl border transition-all flex flex-col justify-between gap-5 ${
-                    quest.is_claimed
+                    isQuestClaimed
                       ? 'bg-slate-900/40 border-white/5 opacity-60'
-                      : quest.is_completed
+                      : isQuestCompleted
                       ? 'bg-gradient-to-br from-slate-900/90 to-amber-950/30 border-amber-500/40 shadow-xl shadow-amber-950/30'
                       : 'bg-slate-900/80 border-white/10 hover:border-indigo-500/30'
                   }`}
@@ -251,13 +258,13 @@ export default function QuestsPage() {
                       <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
                         <span>Progress</span>
                         <span>
-                          {quest.progress_current} / {quest.progress_total}
+                          {isQuestCompleted ? 'Completed' : `${quest.progress_current ?? quest.progress_percent ?? 0} / ${quest.progress_total ?? 100}`}
                         </span>
                       </div>
                       <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                         <div
                           className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-500"
-                          style={{ width: `${percent}%` }}
+                          style={{ width: `${isQuestCompleted ? 100 : percent}%` }}
                         />
                       </div>
                     </div>
@@ -265,12 +272,12 @@ export default function QuestsPage() {
 
                   {/* Actions */}
                   <div className="pt-2">
-                    {quest.is_claimed ? (
+                    {isQuestClaimed ? (
                       <div className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-500 text-xs font-bold flex items-center justify-center gap-1.5 border border-white/5">
                         <Check className="w-4 h-4" />
                         <span>Reward Claimed</span>
                       </div>
-                    ) : quest.is_completed ? (
+                    ) : isQuestCompleted ? (
                       <button
                         onClick={() => handleClaim(quest)}
                         disabled={claimingId === quest.id}
@@ -285,7 +292,13 @@ export default function QuestsPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => router.push('/student/map')}
+                        onClick={() => {
+                          if (quest.target_id) {
+                            router.push(`/student/assessments/${quest.target_id}`);
+                          } else {
+                            router.push('/student/map');
+                          }
+                        }}
                         className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 border border-white/5 transition"
                       >
                         <span>Go to Quest Objective</span>

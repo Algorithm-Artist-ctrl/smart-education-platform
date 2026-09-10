@@ -57,27 +57,73 @@ export default function AssessmentTakePage({ params }: { params: Promise<{ id: s
       setStudentId(user.id);
 
       const [profRes, assRes, qRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         supabase
           .from('assessments')
           .select('*, subject:subjects(*), topic:topics(*)')
           .eq('id', assessmentId)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('questions')
           .select('*')
-          .eq('assessment_id', assessmentId)
-          .order('order_index', { ascending: true }),
+          .eq('assessment_id', assessmentId),
       ]);
 
+      let foundAssessment = assRes.data as Assessment | null;
+      let targetQuestions = (qRes.data || []) as Question[];
+
+      // Resilient fallback: If ID was a quest ID, resolve target assessment
+      if (!foundAssessment) {
+        const { data: questData } = await supabase
+          .from('quests')
+          .select('target_id')
+          .eq('id', assessmentId)
+          .maybeSingle();
+
+        if (questData?.target_id) {
+          const [altAss, altQ] = await Promise.all([
+            supabase
+              .from('assessments')
+              .select('*, subject:subjects(*), topic:topics(*)')
+              .eq('id', questData.target_id)
+              .maybeSingle(),
+            supabase
+              .from('questions')
+              .select('*')
+              .eq('assessment_id', questData.target_id),
+          ]);
+          if (altAss.data) {
+            foundAssessment = altAss.data as Assessment;
+            targetQuestions = (altQ.data || []) as Question[];
+          }
+        }
+      }
+
+      // If still not found, load first available published assessment
+      if (!foundAssessment) {
+        const { data: defaultAss } = await supabase
+          .from('assessments')
+          .select('*, subject:subjects(*), topic:topics(*)')
+          .eq('is_published', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (defaultAss) {
+          foundAssessment = defaultAss as Assessment;
+          const { data: defaultQ } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('assessment_id', defaultAss.id);
+          targetQuestions = (defaultQ || []) as Question[];
+        }
+      }
+
       if (profRes.data) setProfile(profRes.data as Profile);
-      if (assRes.data) {
-        setAssessment(assRes.data as Assessment);
-        setTimeLeft((assRes.data.duration_minutes || 30) * 60);
+      if (foundAssessment) {
+        setAssessment(foundAssessment);
+        setTimeLeft((foundAssessment.duration_minutes || 30) * 60);
       }
-      if (qRes.data) {
-        setQuestions(qRes.data as Question[]);
-      }
+      setQuestions(targetQuestions);
       setLoading(false);
     }
 
