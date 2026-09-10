@@ -48,6 +48,27 @@ export default function NovaAICompanion({
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Suggested prompt chips per product specifications
+  const suggestedPrompts = [
+    { text: "What is a quadratic equation?", label: "What is a quadratic equation?", tag: "English" },
+    { text: "Quadratic equation kya hoti hai?", label: "Quadratic equation kya hoti hai?", tag: "Hinglish" },
+    { text: "Bhai quadratic equation simple way me samjha de", label: "Bhai quadratic equation simple way me samjha de", tag: "Casual Hinglish" },
+    { text: "Give me a practice problem on Quadratic Equations", label: "Practice problem on Quadratic Equations", tag: "Practice" },
+  ];
+
+  // Cleanup abort controller and speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const initialGreeting = language === 'hi'
     ? weakTopicName
@@ -161,6 +182,13 @@ export default function NovaAICompanion({
     const userText = (textToSend || inputVal).trim();
     if (!userText || isLoading) return;
 
+    // Abort previous in-flight request if user submits again
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const newMessages = [...messages, { sender: 'user' as const, text: userText }];
     setMessages(newMessages);
     setInputVal('');
@@ -170,6 +198,7 @@ export default function NovaAICompanion({
       const res = await fetch('/api/ai/nova', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: newMessages.map((m) => ({
             role: m.sender === 'user' ? 'user' : 'model',
@@ -200,7 +229,10 @@ export default function NovaAICompanion({
           },
         ]);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        return; // Request was cleanly cancelled by user
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -384,6 +416,37 @@ export default function NovaAICompanion({
                   </div>
                 </div>
               ))}
+
+              {/* Interactive Starter Prompts (English, Hindi, Hinglish) */}
+              {messages.length <= 1 && (
+                <div className="pt-2 pb-1 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>{language === 'hi' ? 'सुझाए गए प्रश्न (Suggested Prompts):' : 'Try Asking Nova:'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {suggestedPrompts.map((sp, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => handleSend(sp.text)}
+                        className="text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-cyan-500/20 hover:border-cyan-400/50 transition-all text-xs text-slate-200 group flex flex-col gap-1 cursor-pointer disabled:opacity-50 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400/80 group-hover:text-cyan-300">
+                            {sp.tag}
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                        <span className="line-clamp-2 leading-relaxed text-[11px] font-medium group-hover:text-white">
+                          "{sp.label}"
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {isLoading && (
                 <div className="flex justify-start">
