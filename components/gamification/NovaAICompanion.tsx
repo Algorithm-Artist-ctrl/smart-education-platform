@@ -8,21 +8,21 @@ import {
   Sparkles, 
   X, 
   Send, 
-  Bot, 
   ArrowRight, 
-  Lightbulb, 
-  MessageSquare, 
   Loader2,
   Mic,
   MicOff,
   Volume2,
   VolumeX,
-  Zap,
+  Settings,
   HelpCircle,
-  Brain
+  Brain,
+  Lightbulb
 } from 'lucide-react';
+import AIPartnerSettingsModal from './AIPartnerSettingsModal';
 
 interface NovaAICompanionProps {
+  partnerName?: string;
   weakTopicName?: string | null;
   studentName?: string;
   recommendedSubject?: string;
@@ -33,6 +33,7 @@ interface NovaAICompanionProps {
 }
 
 export default function NovaAICompanion({
+  partnerName = 'Nova',
   weakTopicName,
   studentName = 'Cadet',
   recommendedSubject = 'Mathematics',
@@ -42,7 +43,9 @@ export default function NovaAICompanion({
   className = '',
 }: NovaAICompanionProps) {
   const { language } = useI18n();
+  const [currentPartnerName, setCurrentPartnerName] = useState(partnerName);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
@@ -50,6 +53,42 @@ export default function NovaAICompanion({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Sync partnerName prop
+  useEffect(() => {
+    if (partnerName && partnerName !== 'Nova') {
+      setCurrentPartnerName(partnerName);
+    }
+  }, [partnerName]);
+
+  // Fetch student's custom AI profile on mount to hydrate partner name
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAIProfile() {
+      try {
+        const res = await fetch('/api/student/ai-profile');
+        const data = await res.json();
+        if (isMounted && data.success && data.profile?.ai_partner_name) {
+          setCurrentPartnerName(data.profile.ai_partner_name);
+        }
+      } catch (err) {
+        // Fallback silently to prop or 'Nova'
+      }
+    }
+    loadAIProfile();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Listen for global updates (e.g. when user changes partner name in settings or setup modal)
+  useEffect(() => {
+    const handlePartnerUpdated = (e: any) => {
+      if (e.detail?.partnerName) {
+        setCurrentPartnerName(e.detail.partnerName);
+      }
+    };
+    window.addEventListener('ai-partner-updated', handlePartnerUpdated);
+    return () => window.removeEventListener('ai-partner-updated', handlePartnerUpdated);
+  }, []);
 
   // Poll server-side health of Nova AI (Gemini client & key verification)
   useEffect(() => {
@@ -67,7 +106,7 @@ export default function NovaAICompanion({
         }
       } catch {
         if (isMounted) {
-          setAiHealth({ status: 'offline', message: 'Unable to connect to Nova AI service' });
+          setAiHealth({ status: 'offline', message: 'Unable to connect to AI partner service' });
         }
       }
     }
@@ -75,22 +114,26 @@ export default function NovaAICompanion({
     return () => { isMounted = false; };
   }, []);
 
-  // Suggested prompt chips per product specifications
+  // Suggested prompt chips tailored to the student's personal partner
   const suggestedPrompts = [
-    { text: "What is a quadratic equation?", label: "What is a quadratic equation?", tag: "English" },
+    { text: "What is a quadratic equation?", label: "What is a quadratic equation?", tag: "Concept" },
     { text: "Quadratic equation kya hoti hai?", label: "Quadratic equation kya hoti hai?", tag: "Hinglish" },
-    { text: "Bhai quadratic equation simple way me samjha de", label: "Bhai quadratic equation simple way me samjha de", tag: "Casual Hinglish" },
+    { text: `Bhai ${currentPartnerName} simple way me samjha de`, label: `Bhai simple way me samjha de`, tag: "Casual" },
     { text: "Give me a practice problem on Quadratic Equations", label: "Practice problem on Quadratic Equations", tag: "Practice" },
   ];
 
-  // Quick Action buttons with meaningful structured prompt text per requirement 8
+  // All 10 specialized interactive learning modes per Product Specifications
   const quickActions = [
-    { label: "Explain like I'm 10", promptText: "Can you explain this like I'm 10 years old?", hi: 'सरल 10-वर्षीय भाषा में समझाएं', action: 'explain_10' },
-    { label: 'Make it easier', promptText: "Can you make this explanation easier and simpler?", hi: 'और आसान बनाएं', action: 'simplify' },
-    { label: 'Give me a hint', promptText: "Give me a hint to help me solve this problem without telling me the answer.", hi: 'एक संकेत दें', action: 'hint' },
-    { label: 'Explain with example', promptText: "Can you give me a memorable real-world example of this?", hi: 'उदाहरण देकर समझाएं', action: 'example' },
-    { label: 'Practice question', promptText: "Give me one practice question on this topic with multiple choice options.", hi: 'एक अभ्यास प्रश्न दें', action: 'practice' },
-    { label: 'Quiz me', promptText: "Can you quiz me on this to test my understanding?", hi: 'मेरी परीक्षा लें', action: 'quiz' },
+    { label: 'Explain simply', promptText: "Can you explain this simply and clearly with no jargon?", hi: 'सरल भाषा में समझाएं', action: 'explain_simple' },
+    { label: 'Explain with example', promptText: "Can you give me a memorable real-world example of this concept?", hi: 'उदाहरण देकर समझाएं', action: 'example' },
+    { label: 'Give me a hint', promptText: "Give me a small hint to guide my thinking without giving away the answer.", hi: 'एक संकेत दें', action: 'hint' },
+    { label: 'Practice question', promptText: "Give me one practice question on this topic with multiple-choice options.", hi: 'एक अभ्यास प्रश्न दें', action: 'practice' },
+    { label: 'Quiz me', promptText: "Quiz me with 3 quick questions to thoroughly test my understanding.", hi: 'मेरी परीक्षा लें', action: 'quiz' },
+    { label: 'Explain visually', promptText: "Explain this using vivid mental imagery, diagrams, or visual analogies.", hi: 'चित्रों व दृश्य रूप में समझाएं', action: 'visual' },
+    { label: 'Step-by-step', promptText: "Walk me through the complete step-by-step solution for this.", hi: 'चरण-दर-चरण समाधान', action: 'step_by_step' },
+    { label: 'Challenge me', promptText: "Give me a high-order thinking challenge or hard question on this concept.", hi: 'कठिन चुनौती दें', action: 'challenge' },
+    { label: 'Why am I wrong?', promptText: "Can you explain the common misconception here and why this approach might be wrong?", hi: 'मेरी गलती क्या है?', action: 'misconception' },
+    { label: 'Revise topic', promptText: "Give me a 3-point quick revision summary and key formulas for this topic.", hi: 'संक्षेप में दोहराएं', action: 'revise' },
   ];
 
   // Cleanup abort controller and speech synthesis on unmount
@@ -107,11 +150,11 @@ export default function NovaAICompanion({
 
   const initialGreeting = language === 'hi'
     ? weakTopicName
-      ? `नमस्ते ${studentName}! मैंने देखा कि आप "${weakTopicName}" में सुधार कर सकते हैं। क्या हम इसे साथ में समझें या 1 अभ्यास प्रश्न हल करें?`
-      : `नमस्ते ${studentName}! मैं नोवा हूँ, आपका AI स्टडी मेंटर। मुझसे ${recommendedSubject}, फॉर्मूले या होमवर्क के बारे में कुछ भी पूछें!`
+      ? `नमस्ते ${studentName}! मैं ${currentPartnerName} हूँ। मैंने देखा कि आप "${weakTopicName}" में सुधार कर सकते हैं। क्या हम इसे साथ में समझें या 1 अभ्यास प्रश्न हल करें?`
+      : `नमस्ते ${studentName}! मैं ${currentPartnerName} हूँ, आपका व्यक्तिगत AI अध्ययन साथी। मुझसे ${recommendedSubject}, फॉर्मूले या होमवर्क के बारे में कुछ भी पूछें!`
     : weakTopicName
-      ? `Hi ${studentName}! I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
-      : `Greetings ${studentName}! I'm Nova, your AI study mentor. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`;
+      ? `Hi ${studentName}! I'm ${currentPartnerName}, your personal AI learning partner. I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
+      : `Greetings ${studentName}! I'm ${currentPartnerName}, your personal AI learning partner. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`;
 
   const [messages, setMessages] = useState<Array<{ sender: 'nova' | 'user'; text: string }>>([
     {
@@ -121,12 +164,25 @@ export default function NovaAICompanion({
   ]);
   const [inputVal, setInputVal] = useState('');
 
-  // Listen for open events
+  // Update greeting text if currentPartnerName changes and user hasn't chatted yet
   useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
+    if (messages.length === 1 && messages[0].sender === 'nova') {
+      setMessages([{ sender: 'nova', text: initialGreeting }]);
+    }
+  }, [currentPartnerName, language, weakTopicName, studentName, recommendedSubject]);
+
+  // Listen for open events (including optional custom prompts)
+  useEffect(() => {
+    const handleOpen = (e: any) => {
+      setIsOpen(true);
+      if (e.detail?.prompt) {
+        // Pre-fill and trigger send
+        handleSend(e.detail.prompt);
+      }
+    };
     window.addEventListener('open-nova-mentor', handleOpen);
     return () => window.removeEventListener('open-nova-mentor', handleOpen);
-  }, []);
+  }, [messages, isLoading]);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -246,6 +302,7 @@ export default function NovaAICompanion({
             weakTopics: weakTopicName ? [weakTopicName] : [],
             language,
             actionType,
+            partnerName: currentPartnerName,
           },
         }),
       });
@@ -259,22 +316,22 @@ export default function NovaAICompanion({
           {
             sender: 'nova',
             text: data.error || (language === 'hi' 
-              ? 'नोवा अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।'
-              : 'Nova is temporarily unavailable. Please try again.'),
+              ? `${currentPartnerName} अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।`
+              : `${currentPartnerName} is temporarily unavailable. Please try again.`),
           },
         ]);
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        return; // Request was cleanly cancelled by user
+        return; // Request cleanly cancelled
       }
       setMessages((prev) => [
         ...prev,
         {
           sender: 'nova',
           text: language === 'hi'
-            ? 'नोवा अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।'
-            : 'Nova is temporarily unavailable. Please try again.',
+            ? `${currentPartnerName} अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।`
+            : `${currentPartnerName} is temporarily unavailable. Please try again.`,
         },
       ]);
     } finally {
@@ -286,7 +343,6 @@ export default function NovaAICompanion({
     e.preventDefault();
     handleSend();
   };
-
 
   return (
     <>
@@ -304,7 +360,7 @@ export default function NovaAICompanion({
                 <div className="w-full h-full relative rounded-[14px] overflow-hidden bg-slate-950">
                   <Image
                     src="/images/nova_robot.jpg"
-                    alt="Nova AI Mentor"
+                    alt={`${currentPartnerName} Avatar`}
                     fill
                     className="object-cover"
                   />
@@ -318,9 +374,9 @@ export default function NovaAICompanion({
             {/* Dialogue & CTA */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1">
-                  Nova AI
-                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-cyan-300 flex items-center gap-1 truncate">
+                  {currentPartnerName}
+                  <Sparkles className="w-3 h-3 text-cyan-400 shrink-0" />
                 </span>
               </div>
               <p className="text-xs text-slate-300 leading-snug line-clamp-2">
@@ -339,7 +395,7 @@ export default function NovaAICompanion({
               onClick={() => setIsOpen(true)}
               className="shrink-0 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold shadow-md shadow-cyan-500/25 transition-all flex items-center gap-1 cursor-pointer"
             >
-              <span>{language === 'hi' ? 'नोवा से पूछें' : 'Ask Nova'}</span>
+              <span>{language === 'hi' ? `${currentPartnerName} से पूछें` : `Ask ${currentPartnerName}`}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -352,18 +408,18 @@ export default function NovaAICompanion({
           type="button"
           onClick={() => setIsOpen(true)}
           className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-40 p-2.5 rounded-full bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 shadow-2xl shadow-cyan-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 group border border-cyan-400/40 cursor-pointer"
-          title={language === 'hi' ? 'नोवा AI मेंटर से बात करें' : 'Chat with Nova AI Mentor'}
+          title={language === 'hi' ? `${currentPartnerName} से बात करें` : `Chat with ${currentPartnerName}`}
         >
           <div className="w-9 h-9 rounded-full relative overflow-hidden bg-slate-950 border border-white/20">
             <Image
               src="/images/nova_robot.jpg"
-              alt="Nova AI"
+              alt={currentPartnerName}
               fill
               className="object-cover"
             />
           </div>
-          <span className="hidden sm:inline-block pr-2 text-xs font-black text-white tracking-wide">
-            Nova AI
+          <span className="hidden sm:inline-block pr-2 text-xs font-black text-white tracking-wide max-w-[120px] truncate">
+            {currentPartnerName}
           </span>
           <span className={`w-2.5 h-2.5 rounded-full absolute -top-0.5 -right-0.5 border-2 border-slate-950 ${
             aiHealth.status === 'online' ? 'bg-emerald-400 animate-pulse' : aiHealth.status === 'checking' ? 'bg-amber-400' : 'bg-rose-400'
@@ -378,17 +434,17 @@ export default function NovaAICompanion({
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-slate-900/95">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl relative overflow-hidden bg-slate-950 border border-cyan-500/40 shadow-md shadow-cyan-500/30">
+                <div className="w-10 h-10 rounded-xl relative overflow-hidden bg-slate-950 border border-cyan-500/40 shadow-md shadow-cyan-500/30 shrink-0">
                   <Image
                     src="/images/nova_robot.jpg"
-                    alt="Nova AI"
+                    alt={currentPartnerName}
                     fill
                     className="object-cover"
                   />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    Nova AI Companion
+                    <span className="truncate max-w-[180px]">{currentPartnerName}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
                       aiHealth.status === 'online'
                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -408,18 +464,32 @@ export default function NovaAICompanion({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined' && window.speechSynthesis) {
-                    window.speechSynthesis.cancel();
-                  }
-                  setIsOpen(false);
-                }}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              
+              <div className="flex items-center gap-1.5">
+                {/* Settings Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-cyan-300 flex items-center justify-center transition cursor-pointer"
+                  title="Customize AI Partner Settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.speechSynthesis) {
+                      window.speechSynthesis.cancel();
+                    }
+                    setIsOpen(false);
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Chat Messages */}
@@ -457,13 +527,13 @@ export default function NovaAICompanion({
                 </div>
               ))}
 
-              {/* Truthful Offline Diagnostic Notice */}
+              {/* Truthful Diagnostic Notice */}
               {aiHealth.status === 'offline' && messages.length <= 1 && (
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2.5 animate-in fade-in duration-200">
                   <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-amber-300">
-                      {language === 'hi' ? 'नोवा AI स्थिति: अस्थायी रूप से अनुपलब्ध' : 'Nova AI Status: Temporarily Unavailable'}
+                      {language === 'hi' ? `${currentPartnerName} स्थिति: अस्थायी रूप से अनुपलब्ध` : `${currentPartnerName} Status: Temporarily Unavailable`}
                     </p>
                     <p className="text-amber-200/80 text-[10px] mt-0.5 leading-relaxed">
                       {aiHealth.message || (language === 'hi'
@@ -474,12 +544,12 @@ export default function NovaAICompanion({
                 </div>
               )}
 
-              {/* Interactive Starter Prompts (English, Hindi, Hinglish) */}
+              {/* Interactive Starter Prompts */}
               {messages.length <= 1 && (
                 <div className="pt-2 pb-1 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>{language === 'hi' ? 'सुझाए गए प्रश्न (Suggested Prompts):' : 'Try Asking Nova:'}</span>
+                    <span>{language === 'hi' ? 'सुझाए गए प्रश्न:' : `Try Asking ${currentPartnerName}:`}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {suggestedPrompts.map((sp, idx) => (
@@ -509,14 +579,14 @@ export default function NovaAICompanion({
                 <div className="flex justify-start">
                   <div className="rounded-2xl px-4 py-3 text-xs bg-slate-800/90 text-cyan-300 border border-cyan-500/20 flex items-center gap-2.5 shadow-md">
                     <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-                    <span>{language === 'hi' ? 'नोवा उत्तर तैयार कर रहा है...' : 'Nova is preparing your answer...'}</span>
+                    <span>{language === 'hi' ? `${currentPartnerName} उत्तर तैयार कर रहा है...` : `${currentPartnerName} is preparing your answer...`}</span>
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions Bar (Part 14 & Requirement 8) */}
+            {/* Quick Actions Bar with all 10 specialized learning interaction modes */}
             <div className="px-4 py-2 border-t border-white/5 bg-slate-950/50 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {quickActions.map((qa, idx) => (
                 <button
@@ -542,14 +612,14 @@ export default function NovaAICompanion({
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder={
                   language === 'hi'
-                    ? 'नोवा से अवधारणा, सूत्र या प्रश्न पूछें...'
-                    : 'Ask Nova about a concept, formula, or problem...'
+                    ? `${currentPartnerName} से अवधारणा, सूत्र या प्रश्न पूछें...`
+                    : `Ask ${currentPartnerName} about a concept, formula, or problem...`
                 }
                 disabled={isLoading || isListening}
                 className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 transition-all disabled:opacity-50"
               />
 
-              {/* Voice Mic Button (Part 18) */}
+              {/* Voice Mic Button */}
               <button
                 type="button"
                 onClick={toggleVoiceListening}
@@ -577,6 +647,15 @@ export default function NovaAICompanion({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Embedded Settings Modal */}
+      {isSettingsOpen && (
+        <AIPartnerSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onUpdated={(newName) => setCurrentPartnerName(newName)}
+        />
       )}
     </>
   );

@@ -41,6 +41,7 @@ export interface StudentProfile {
     reduced_motion?: boolean;
     lite_mode?: boolean;
   };
+  ai_partner_name?: string;
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -48,6 +49,48 @@ export interface StudentProfile {
   class?: AcademicClass;
   section?: Section;
 }
+
+export type AIPartnerConversationStyle = 'simple' | 'friendly' | 'hinglish' | 'detailed' | 'visual';
+export type AIPartnerExplanationStyle = 'examples' | 'step_by_step' | 'intuitive' | 'visual' | 'rigorous';
+
+export interface StudentAIProfile {
+  student_id: string;
+  ai_partner_name: string;
+  preferred_language: 'en' | 'hi' | 'hinglish';
+  conversation_style: AIPartnerConversationStyle;
+  explanation_style: AIPartnerExplanationStyle;
+  interaction_preferences: {
+    hint_first?: boolean;
+    show_examples?: boolean;
+    challenge_mode?: boolean;
+    auto_practice?: boolean;
+    [key: string]: any;
+  };
+  learning_memory: {
+    common_mistakes?: string[];
+    memorized_facts?: string[];
+    focus_topics?: string[];
+    learning_habits?: string[];
+    preferred_topics?: string[];
+    [key: string]: any;
+  };
+  last_learning_context?: Record<string, any>;
+  activity_summary?: string;
+  setup_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningEvent {
+  id: string;
+  student_id: string;
+  event_type: string;
+  subject_id?: string | null;
+  topic_id?: string | null;
+  metadata?: Record<string, any>;
+  created_at: string;
+}
+
 
 export interface Quest {
   id: string;

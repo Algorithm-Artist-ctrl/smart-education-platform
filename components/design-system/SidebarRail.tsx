@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Palette,
   Globe,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react';
 
 export function SidebarRail({ className = '' }: { className?: string }) {
@@ -23,6 +24,7 @@ export function SidebarRail({ className = '' }: { className?: string }) {
 
   const navItems = [
     { href: '/student', label: 'Home', icon: <Home className="w-5 h-5" /> },
+    { href: '/student/insights', label: 'AI Insights', icon: <Sparkles className="w-5 h-5" /> },
     { href: '/student/map', label: 'Learning Map', icon: <Map className="w-5 h-5" /> },
     { href: '/student/creativity', label: 'Creativity Lab', icon: <Palette className="w-5 h-5" /> },
     { href: '/student/missions', label: 'Life Missions', icon: <Globe className="w-5 h-5" /> },

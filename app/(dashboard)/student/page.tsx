@@ -10,6 +10,7 @@ import MobileBottomNav from '@/components/shared/MobileBottomNav';
 import SidebarRail from '@/components/design-system/SidebarRail';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import WellbeingCheckIn from '@/components/gamification/WellbeingCheckIn';
+import AIPartnerSetupTrigger from '@/components/gamification/AIPartnerSetupTrigger';
 import { calculateLevel } from '@/lib/gamification-engine';
 import { getRecommendedNextStep } from '@/lib/learning-engine';
 import { translations, Language } from '@/lib/i18n';
@@ -30,7 +31,8 @@ import {
   Compass,
   Palette,
   Rocket,
-  Lightbulb
+  Lightbulb,
+  Brain
 } from 'lucide-react';
 import { Profile, Quest, Subject, WeakTopic, StudyPlan } from '@/types/database.types';
 
@@ -122,7 +124,8 @@ export default async function StudentDashboardPage() {
     recommendedStep,
     masteryRes,
     diagnosticRes,
-    topicsRes
+    topicsRes,
+    aiProfileRes
   ] = await Promise.all([
     supabase
       .from('quests')
@@ -177,6 +180,11 @@ export default async function StudentDashboardPage() {
     supabase
       .from('topics')
       .select('id, subject_id'),
+    supabase
+      .from('student_ai_profiles')
+      .select('*')
+      .eq('student_id', user.id)
+      .maybeSingle(),
   ]);
 
   const quests: Quest[] = questsRes.data || [];
@@ -190,6 +198,8 @@ export default async function StudentDashboardPage() {
   const diagnosticData = diagnosticRes.data || null;
   const allTopics = topicsRes.data || [];
   const baselineScores = (diagnosticData?.subject_scores as Record<string, number>) || {};
+  const aiProfile = aiProfileRes.data || null;
+  const partnerName = aiProfile?.ai_partner_name || studentProfile?.ai_partner_name || 'Nova';
 
   const primaryQuest: Quest | null = quests[0] || null;
   const primaryWeakTopic = weakTopics[0]?.topic?.name || null;
@@ -445,7 +455,7 @@ export default async function StudentDashboardPage() {
               </div>
             </div>
 
-            {/* Nova AI Dynamic Adaptive Recommendation Card */}
+            {/* AI Learning Partner Dynamic Adaptive Recommendation Card */}
             <div className="md:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-cyan-950/30 border border-cyan-500/30 p-5 backdrop-blur-xl shadow-xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -453,23 +463,31 @@ export default async function StudentDashboardPage() {
                     <div className="relative w-9 h-9 rounded-xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950">
                       <Image
                         src="/images/nova_robot.jpg"
-                        alt="Nova AI Mentor"
+                        alt={`${partnerName} Avatar`}
                         fill
                         className="object-cover"
                       />
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-white leading-none">
-                        Nova AI
+                      <h4 className="text-sm font-black text-white leading-none truncate max-w-[130px]">
+                        {partnerName}
                       </h4>
                       <span className="text-[10px] text-cyan-400 font-semibold">
-                        {t.nextBestAction}
+                        {partnerName} • {t.nextBestAction}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold uppercase">
-                    {t.adaptive}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold uppercase">
+                      {t.adaptive}
+                    </span>
+                    <AIPartnerSetupTrigger
+                      partnerName={partnerName}
+                      preferredLanguage={aiProfile?.preferred_language || 'en'}
+                      conversationStyle={aiProfile?.conversation_style || 'friendly'}
+                      setupCompleted={aiProfile?.setup_completed}
+                    />
+                  </div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/25 text-xs text-slate-200 leading-relaxed mb-2 space-y-1.5">
@@ -486,13 +504,20 @@ export default async function StudentDashboardPage() {
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2">
                 <Link
                   href={recommendedStep.targetUrl}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
                   <span>{t.executeNextStep}</span>
+                </Link>
+                <Link
+                  href="/student/insights"
+                  className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-cyan-300 border border-white/10 text-xs font-bold transition flex items-center justify-center shrink-0"
+                  title="View AI Learning Insights"
+                >
+                  <Brain className="w-4 h-4" />
                 </Link>
               </div>
             </div>
@@ -711,8 +736,9 @@ export default async function StudentDashboardPage() {
         </main>
       </div>
 
-      {/* Floating Nova AI Companion (Persistent across student portal) */}
+      {/* Floating Personal AI Companion (Persistent across student portal) */}
       <NovaAICompanion
+        partnerName={partnerName}
         weakTopicName={primaryWeakTopic}
         studentName={studentName}
         level={levelInfo.level}

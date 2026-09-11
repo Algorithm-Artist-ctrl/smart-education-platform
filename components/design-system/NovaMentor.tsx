@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Bot, Sparkles, ArrowRight, MessageSquare } from 'lucide-react';
 
 export interface NovaMentorProps {
+  partnerName?: string;
   message: string;
   userName?: string;
   actionLabel?: string;
@@ -17,6 +18,7 @@ export interface NovaMentorProps {
 }
 
 export function NovaMentor({
+  partnerName = 'Nova AI',
   message,
   userName,
   actionLabel = 'Start Practice',
@@ -39,9 +41,9 @@ export function NovaMentor({
           />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-            <Sparkles className="w-2.5 h-2.5" />
-            Nova AI
+          <div className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 uppercase tracking-wider truncate">
+            <Sparkles className="w-2.5 h-2.5 shrink-0" />
+            <span>{partnerName}</span>
           </div>
           <p className="text-xs text-slate-200 line-clamp-1">
             {message}
@@ -73,11 +75,11 @@ export function NovaMentor({
       className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-900/70 to-cyan-950/30 border border-cyan-500/25 p-5 backdrop-blur-xl shadow-lg shadow-cyan-950/20 ${className}`}
     >
       <div className="flex items-start gap-4">
-        {/* 3D Nova Robot Avatar */}
+        {/* 3D Robot Avatar */}
         <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 border-cyan-400/40 shadow-lg shadow-cyan-500/20 bg-slate-950">
           <Image
             src="/images/nova_robot.jpg"
-            alt="Nova AI Mentor"
+            alt={`${partnerName} Avatar`}
             fill
             className="object-cover"
           />
@@ -86,9 +88,9 @@ export function NovaMentor({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              Nova AI
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 truncate">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>{partnerName}</span>
             </span>
             <span className="text-[10px] text-slate-400 font-medium">
               Study Companion
