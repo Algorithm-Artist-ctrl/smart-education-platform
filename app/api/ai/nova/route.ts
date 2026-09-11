@@ -1,5 +1,6 @@
 // app/api/ai/nova/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@/lib/supabase/server';
 
 interface Message {
@@ -11,14 +12,78 @@ interface Message {
 interface StudentContext {
   studentName?: string;
   level?: number;
+  grade?: string;
+  board?: string;
   currentSubject?: string;
+  currentChapter?: string;
+  currentTopic?: string;
+  topicMastery?: number;
   weakTopics?: string[];
+  learningPreferences?: string[];
+  supportSignals?: string[];
   language?: 'en' | 'hi';
   actionType?: 'explain_10' | 'simplify' | 'example' | 'hint' | 'practice' | 'quiz' | string;
 }
 
 export const dynamic = 'force-dynamic';
 
+// GET: Server-side health check verifying environment variable, SDK initialization, and connectivity
+export async function GET() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        status: 'offline',
+        configured: false,
+        model: 'gemini-2.5-flash',
+        sdk: '@google/genai',
+        message: 'GEMINI_API_KEY is not configured on the server. Please set GEMINI_API_KEY in your deployment environment.',
+      },
+      { status: 503 }
+    );
+  }
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    // Lightweight verification call
+    const testResponse = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: 'ping',
+      config: {
+        maxOutputTokens: 10,
+        temperature: 0.1,
+      },
+    });
+
+    const isHealthy = !!testResponse?.text;
+
+    return NextResponse.json({
+      status: isHealthy ? 'online' : 'degraded',
+      configured: true,
+      model: 'gemini-2.5-flash',
+      sdk: '@google/genai',
+      message: isHealthy 
+        ? 'Nova AI neural cortex is active, connected to Gemini 2.5 Flash.'
+        : 'Gemini client connected, but response was empty.',
+    });
+  } catch (err: any) {
+    console.error('Nova AI health check error:', err?.message || err);
+    return NextResponse.json(
+      {
+        status: 'offline',
+        configured: true,
+        model: 'gemini-2.5-flash',
+        sdk: '@google/genai',
+        error: err?.message || 'Failed to communicate with Gemini API',
+        message: 'Gemini API key is set, but the API request failed. Verify key permissions or quota.',
+      },
+      { status: 502 }
+    );
+  }
+}
+
+// POST: Authenticated, context-rich personalized study companion query
 export async function POST(request: NextRequest) {
   try {
     // 1. Authenticate student session
@@ -64,12 +129,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!apiKey) {
-      // Return student-friendly configuration message without throwing crashes
-      let configMsg = "Nova AI is currently configuring its neural cortex. Please verify GEMINI_API_KEY in the environment settings.";
+      let configMsg = "Nova AI cortex is currently awaiting GEMINI_API_KEY on the server. Please configure GEMINI_API_KEY in your environment variables.";
       if (detectedMode === 'hinglish') {
-        configMsg = "Nova AI ka neural cortex configure ho raha hai. Please server environment me GEMINI_API_KEY check karein.";
+        configMsg = "Nova AI cortex ko server par GEMINI_API_KEY ki zaroorat hai. Please environment variables me GEMINI_API_KEY set karein.";
       } else if (detectedMode === 'devanagari') {
-        configMsg = "नोवा AI का न्यूरल कॉर्टेक्स कॉन्फ़िगर हो रहा है। कृपया सर्वर सेटिंग्स में GEMINI_API_KEY जांचें।";
+        configMsg = "नोवा AI कॉर्टेक्स को सर्वर पर GEMINI_API_KEY की आवश्यकता है। कृपया एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।";
       }
 
       return NextResponse.json(
@@ -82,16 +146,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 2. Load deep student learning context from Supabase (if authenticated)
+    let deepContext = {
+      grade: studentContext.grade || '10th',
+      board: studentContext.board || 'CBSE',
+      learningPreferences: studentContext.learningPreferences || ['visual', 'practice'],
+      supportSignals: studentContext.supportSignals || [],
+      currentSubject: studentContext.currentSubject || 'Mathematics',
+      currentTopic: studentContext.currentTopic || 'Quadratic Equations',
+      topicMastery: studentContext.topicMastery ?? 54,
+      weakTopics: studentContext.weakTopics || [],
+      recentMistakes: [] as string[],
+      wellbeingSignal: '',
+    };
+
+    if (user) {
+      try {
+        const [profileRes, masteryRes, weakRes, attemptsRes, wellbeingRes] = await Promise.all([
+          supabase.from('student_profiles').select('grade, board, preferred_language, learning_preferences, support_signals, learning_pace').eq('id', user.id).maybeSingle(),
+          supabase.from('topic_mastery').select('mastery_level, topics(name, subjects(name))').eq('student_id', user.id).order('mastery_level', { ascending: true }).limit(3),
+          supabase.from('weak_topics').select('topic_name, reason').eq('student_id', user.id).limit(3),
+          supabase.from('quiz_attempts').select('score, answers').eq('student_id', user.id).order('created_at', { ascending: false }).limit(2),
+          supabase.from('wellbeing_signals').select('energy_level, emotional_state').eq('student_id', user.id).order('created_at', { ascending: false }).limit(1),
+        ]);
+
+        if (profileRes.data) {
+          if (profileRes.data.grade) deepContext.grade = profileRes.data.grade;
+          if (profileRes.data.board) deepContext.board = profileRes.data.board;
+          if (profileRes.data.learning_preferences?.length) deepContext.learningPreferences = profileRes.data.learning_preferences;
+          if (profileRes.data.support_signals?.length) deepContext.supportSignals = profileRes.data.support_signals;
+        }
+
+        if (masteryRes.data && masteryRes.data.length > 0) {
+          const topMastery = masteryRes.data[0];
+          if ((topMastery as any).topics?.name) {
+            deepContext.currentTopic = (topMastery as any).topics.name;
+          }
+          if ((topMastery as any).topics?.subjects?.name) {
+            deepContext.currentSubject = (topMastery as any).topics.subjects.name;
+          }
+          deepContext.topicMastery = topMastery.mastery_level;
+        }
+
+        if (weakRes.data && weakRes.data.length > 0) {
+          deepContext.weakTopics = weakRes.data.map(w => w.topic_name);
+        }
+
+        if (attemptsRes.data && attemptsRes.data.length > 0) {
+          const mistakes: string[] = [];
+          for (const att of attemptsRes.data) {
+            if (Array.isArray(att.answers)) {
+              for (const a of att.answers) {
+                if (a && a.is_correct === false && a.topic) {
+                  mistakes.push(`${a.topic}: ${a.student_answer || 'incorrect response'}`);
+                }
+              }
+            }
+          }
+          deepContext.recentMistakes = mistakes.slice(0, 3);
+        }
+
+        if (wellbeingRes.data && wellbeingRes.data.length > 0) {
+          deepContext.wellbeingSignal = `Energy: ${wellbeingRes.data[0].energy_level}, Mood: ${wellbeingRes.data[0].emotional_state}`;
+        }
+      } catch (err) {
+        console.warn('Could not load auxiliary student context for Nova (proceeding gracefully):', err);
+      }
+    }
+
     // Compose personalized pedagogical system prompt
     const studentName = studentContext.studentName || 'Student';
     const level = studentContext.level || 1;
-    const subject = studentContext.currentSubject || 'General Academics';
-    const language = studentContext.language || 'en';
     const actionType = studentContext.actionType;
-
-    const weakTopicsStr = studentContext.weakTopics && studentContext.weakTopics.length > 0
-      ? `The student has currently identified focus areas in: ${studentContext.weakTopics.join(', ')}.`
-      : '';
 
     let languageInstruction = '';
     if (detectedMode === 'devanagari') {
@@ -129,9 +255,19 @@ export async function POST(request: NextRequest) {
       actionInstruction = 'CRITICAL: Formulate a mini-quiz with 2 progressive questions to test conceptual understanding.';
     }
 
-    const systemPrompt = `You are Nova, the intelligent, friendly, and adaptive 3D study mentor on the Smart Edu platform.
-You are tutoring ${studentName}, who is currently at Level ${level}, focusing on ${subject}.
-${weakTopicsStr}
+    const learningStyleAdvice = deepContext.learningPreferences.includes('visual')
+      ? 'Pedagogy: Student is a Visual Learner. Use ASCII/Markdown visual mental models, flow diagrams, step boxes, and visual spatial analogies.'
+      : 'Pedagogy: Student is a Practice Learner. Provide concise concept intuition and immediately ground it in worked mathematical problems.';
+
+    const systemPrompt = `You are Nova, the intelligent, friendly, and adaptive 3D study companion on the Smart Edu platform.
+You are tutoring ${studentName}, a Grade ${deepContext.grade} (${deepContext.board} curriculum) learner currently at Level ${level}.
+
+Current Subject: ${deepContext.currentSubject}
+Current Topic: ${deepContext.currentTopic} (Mastery: ${deepContext.topicMastery}%)
+Identified Weak Topics: ${deepContext.weakTopics.length ? deepContext.weakTopics.join(', ') : 'None currently flagged'}
+${deepContext.recentMistakes.length ? `Recent Student Mistakes: ${deepContext.recentMistakes.join('; ')}` : ''}
+${deepContext.wellbeingSignal ? `Learner State: ${deepContext.wellbeingSignal}` : ''}
+${learningStyleAdvice}
 
 Language Directive:
 ${languageInstruction}
@@ -139,23 +275,22 @@ ${languageInstruction}
 Special Action Directive:
 ${actionInstruction || 'Provide a step-by-step, engaging explanation with intuitive logic, clear formulas, and an interactive check-in question.'}
 
-Core Tutoring Principles:
+Core Companion Rules:
 1. Explain academic concepts step-by-step with intuitive clarity, using real-world analogies and visual descriptions.
 2. If the student asks for a formula or concept (like Quadratic Equations), state the standard equation clearly (e.g. ax² + bx + c = 0), explain what each variable means, state the formula (e.g. x = (-b ± √(b² - 4ac)) / (2a)), and walk through a quick, intuitive example.
-3. If the student asks a follow-up question (e.g. "Iska formula kya hai?", "Why does this happen?", "Give an example"), understand that "iska" refers to the concept discussed in the immediately preceding turns.
+3. CONVERSATION CONTEXT & FOLLOW-UPS: Always maintain continuous memory of recent turns. If the student asks "like what?", "give me one", "why am I getting this wrong?", or "can you recall all important formulae", understand they are referring to the current topic (${deepContext.currentTopic}) and previous discussion.
 4. If the student attempts an answer, evaluate it constructively, highlighting what they did right before gently guiding corrections.
-5. Keep explanations structured, easy to digest, and visually neat using Markdown formatting (bullet points, bolding, formula notation).
-6. Never repeat generic greetings once a conversation is underway.
-7. Always stay in character as a motivating, warm, and supportive AI study mentor.
-8. Ground all academic steps in accurate mathematical and scientific facts — never fabricate incorrect steps.`;
+5. If the student says "I don't understand", NEVER repeat the exact same text. Change your analogy, break down the root component, and try a different angle.
+6. Keep explanations structured, easy to digest, and visually neat using Markdown formatting (bullet points, bolding, formula notation).
+7. Ground all academic steps in accurate mathematical and scientific facts — never fabricate incorrect steps.`;
 
-    // Format conversation history for Gemini API (max 12 recent turns)
+    // Format conversation history for @google/genai
     const recentMessages = messages.slice(-12);
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
     for (const msg of recentMessages) {
       const isUser = msg.role === 'user' || msg.sender === 'user';
-      const geminiRole: 'user' | 'model' = isUser ? 'user' : 'model';
+      const geminiRole = isUser ? 'user' : 'model';
       const text = (msg.text || '').trim();
       if (!text) continue;
 
@@ -181,68 +316,63 @@ Core Tutoring Principles:
       );
     }
 
-    // Call Gemini API using active GA models (gemini-2.5-flash, gemini-2.5-flash-lite, gemini-1.5-flash)
-    // Note: retired gemini-2.0-flash has been completely removed.
+    // Execute server-side Gemini request via official @google/genai SDK
+    const ai = new GoogleGenAI({ apiKey });
     const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
     let lastError: any = null;
     let replyText = '';
+    let usedModel = '';
 
     for (const model of modelsToTry) {
       try {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: systemPrompt }],
-            },
-            generationConfig: {
-              temperature: 0.7,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            },
-          }),
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0.7,
+            maxOutputTokens: 1200,
+          },
         });
 
-        const data = await res.json();
-
-        if (res.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          replyText = data.candidates[0].content.parts[0].text;
+        if (response?.text) {
+          replyText = response.text;
+          usedModel = model;
           break;
         } else {
-          lastError = data?.error || { message: `Model ${model} returned status ${res.status}` };
-          if (res.status === 404 || res.status === 400) continue;
-          continue;
+          lastError = new Error(`Model ${model} returned empty response`);
         }
-      } catch (fetchErr: any) {
-        lastError = fetchErr;
+      } catch (sdkErr: any) {
+        lastError = sdkErr;
+        console.warn(`Model ${model} attempt encountered:`, sdkErr?.message || sdkErr);
       }
     }
 
     if (!replyText) {
-      console.error('Gemini API call failed across models:', lastError?.message || lastError);
+      const rawErrMsg = lastError?.message || 'Gemini service encountered an error';
+      console.error('Gemini API call failed across models:', rawErrMsg);
 
-      // Safe, student-friendly fallback response (never expose raw API/model error internals)
-      let studentFacingFallback = "I'm having a brief connection pause with my knowledge cortex. Let's try asking that question again in a moment!";
-      if (detectedMode === 'hinglish') {
-        studentFacingFallback = "Thoda sa connection issue ho gaya tha mere knowledge cortex ke sath. Ek baar phirse pooch ke dekho, mai abhi solve karta hu!";
-      } else if (detectedMode === 'devanagari') {
-        studentFacingFallback = "नॉलेज कॉर्टेक्स से संपर्क में थोड़ी समस्या आ रही है। कृपया एक क्षण बाद पुनः पूछें!";
+      // Truthful error classification
+      let studentFacingError = 'Nova AI is momentarily unable to reach Gemini services. Please try again.';
+      if (rawErrMsg.includes('API_KEY_INVALID') || rawErrMsg.includes('403') || rawErrMsg.includes('PERMISSION_DENIED')) {
+        studentFacingError = 'The configured Gemini API key is invalid or lacks required permissions.';
+      } else if (rawErrMsg.includes('RESOURCE_EXHAUSTED') || rawErrMsg.includes('429')) {
+        studentFacingError = 'Gemini API quota rate limit reached. Please wait a few seconds before asking again.';
+      } else if (rawErrMsg.includes('NOT_FOUND') || rawErrMsg.includes('404')) {
+        studentFacingError = 'Selected Gemini model is currently not supported for this account.';
       }
 
       return NextResponse.json(
         {
           success: false,
-          error: studentFacingFallback,
+          error: studentFacingError,
+          rawError: process.env.NODE_ENV === 'development' ? rawErrMsg : undefined,
         },
         { status: 502 }
       );
     }
 
     // Non-blocking fire-and-forget conversation persistence in Supabase
-    // This allows the response to return to the student immediately without waiting for DB writes
     if (user) {
       (async () => {
         try {
@@ -252,8 +382,8 @@ Core Tutoring Principles:
               .from('nova_conversations')
               .insert({
                 student_id: user.id,
-                subject_name: subject,
-                title: `${subject} Session`,
+                subject_name: deepContext.currentSubject,
+                title: `${deepContext.currentTopic} Session`,
               })
               .select()
               .maybeSingle();
@@ -268,14 +398,14 @@ Core Tutoring Principles:
                 sender: 'user',
                 text: userPromptText,
                 action_type: actionType || null,
-                language,
+                language: studentContext.language || 'en',
               },
               {
                 conversation_id: activeConvoId,
                 sender: 'nova',
                 text: replyText,
                 action_type: actionType || null,
-                language,
+                language: studentContext.language || 'en',
               },
             ]);
           }
@@ -288,9 +418,10 @@ Core Tutoring Principles:
     return NextResponse.json({
       success: true,
       reply: replyText,
+      model: usedModel,
     });
   } catch (err: any) {
-    console.error('Nova AI route error:', err);
+    console.error('Nova AI route general error:', err);
     return NextResponse.json(
       {
         success: false,
@@ -300,3 +431,4 @@ Core Tutoring Principles:
     );
   }
 }
+

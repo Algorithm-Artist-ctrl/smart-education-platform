@@ -46,9 +46,34 @@ export default function NovaAICompanion({
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
+  const [aiHealth, setAiHealth] = useState<{ status: 'checking' | 'online' | 'offline'; message?: string; model?: string }>({ status: 'checking' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Poll server-side health of Nova AI (Gemini client & key verification)
+  useEffect(() => {
+    let isMounted = true;
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/ai/nova');
+        const data = await res.json();
+        if (isMounted) {
+          setAiHealth({
+            status: data.status === 'online' ? 'online' : 'offline',
+            message: data.message,
+            model: data.model,
+          });
+        }
+      } catch {
+        if (isMounted) {
+          setAiHealth({ status: 'offline', message: 'Unable to connect to Nova AI service' });
+        }
+      }
+    }
+    checkHealth();
+    return () => { isMounted = false; };
+  }, []);
 
   // Suggested prompt chips per product specifications
   const suggestedPrompts = [
@@ -56,6 +81,16 @@ export default function NovaAICompanion({
     { text: "Quadratic equation kya hoti hai?", label: "Quadratic equation kya hoti hai?", tag: "Hinglish" },
     { text: "Bhai quadratic equation simple way me samjha de", label: "Bhai quadratic equation simple way me samjha de", tag: "Casual Hinglish" },
     { text: "Give me a practice problem on Quadratic Equations", label: "Practice problem on Quadratic Equations", tag: "Practice" },
+  ];
+
+  // Quick Action buttons with meaningful structured prompt text per requirement 8
+  const quickActions = [
+    { label: "Explain like I'm 10", promptText: "Can you explain this like I'm 10 years old?", hi: 'सरल 10-वर्षीय भाषा में समझाएं', action: 'explain_10' },
+    { label: 'Make it easier', promptText: "Can you make this explanation easier and simpler?", hi: 'और आसान बनाएं', action: 'simplify' },
+    { label: 'Give me a hint', promptText: "Give me a hint to help me solve this problem without telling me the answer.", hi: 'एक संकेत दें', action: 'hint' },
+    { label: 'Explain with example', promptText: "Can you give me a memorable real-world example of this?", hi: 'उदाहरण देकर समझाएं', action: 'example' },
+    { label: 'Practice question', promptText: "Give me one practice question on this topic with multiple choice options.", hi: 'एक अभ्यास प्रश्न दें', action: 'practice' },
+    { label: 'Quiz me', promptText: "Can you quiz me on this to test my understanding?", hi: 'मेरी परीक्षा लें', action: 'quiz' },
   ];
 
   // Cleanup abort controller and speech synthesis on unmount
@@ -252,15 +287,6 @@ export default function NovaAICompanion({
     handleSend();
   };
 
-  // Quick Action buttons per Part 14
-  const quickActions = [
-    { label: "Explain like I'm 10", hi: 'सरल 10-वर्षीय भाषा में समझाएं', action: 'explain_10' },
-    { label: 'Make it easier', hi: 'और आसान बनाएं', action: 'simplify' },
-    { label: 'Give me a hint', hi: 'एक संकेत दें', action: 'hint' },
-    { label: 'Explain with example', hi: 'उदाहरण देकर समझाएं', action: 'example' },
-    { label: 'Practice question', hi: 'एक अभ्यास प्रश्न दें', action: 'practice' },
-    { label: 'Quiz me', hi: 'मेरी परीक्षा लें', action: 'quiz' },
-  ];
 
   return (
     <>
@@ -337,7 +363,9 @@ export default function NovaAICompanion({
           <span className="hidden sm:inline-block pr-2 text-xs font-black text-white tracking-wide">
             Nova AI
           </span>
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse absolute -top-0.5 -right-0.5 border-2 border-slate-950" />
+          <span className={`w-2.5 h-2.5 rounded-full absolute -top-0.5 -right-0.5 border-2 border-slate-950 ${
+            aiHealth.status === 'online' ? 'bg-emerald-400 animate-pulse' : aiHealth.status === 'checking' ? 'bg-amber-400' : 'bg-rose-400'
+          }`} />
         </button>
       )}
 
@@ -359,8 +387,18 @@ export default function NovaAICompanion({
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                     Nova AI Companion
-                    <span className="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.5 rounded-full font-bold">
-                      {language === 'hi' ? 'ऑनलाइन' : 'Online'}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
+                      aiHealth.status === 'online'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : aiHealth.status === 'checking'
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    }`}>
+                      {aiHealth.status === 'online'
+                        ? (language === 'hi' ? 'ऑनलाइन' : 'Online')
+                        : aiHealth.status === 'checking'
+                          ? (language === 'hi' ? 'जांच जारी...' : 'Connecting...')
+                          : (language === 'hi' ? 'ऑफ़लाइन' : 'Offline / Config Pending')}
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
@@ -417,6 +455,23 @@ export default function NovaAICompanion({
                 </div>
               ))}
 
+              {/* Truthful Offline Diagnostic Notice */}
+              {aiHealth.status === 'offline' && messages.length <= 1 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2.5 animate-in fade-in duration-200">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-amber-300">
+                      {language === 'hi' ? 'नोवा AI स्थिति: ऑफ़लाइन' : 'Nova AI Status: Offline'}
+                    </p>
+                    <p className="text-amber-200/80 text-[10px] mt-0.5 leading-relaxed">
+                      {aiHealth.message || (language === 'hi'
+                        ? 'सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है। कृपया एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।'
+                        : 'GEMINI_API_KEY is not configured or reachable on the server. Please set GEMINI_API_KEY in your deployment environment.')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Interactive Starter Prompts (English, Hindi, Hinglish) */}
               {messages.length <= 1 && (
                 <div className="pt-2 pb-1 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -459,13 +514,13 @@ export default function NovaAICompanion({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions Bar (Part 14) */}
+            {/* Quick Actions Bar (Part 14 & Requirement 8) */}
             <div className="px-4 py-2 border-t border-white/5 bg-slate-950/50 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {quickActions.map((qa, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => handleSend(qa.label, qa.action)}
+                  onClick={() => handleSend(qa.promptText, qa.action)}
                   disabled={isLoading}
                   className="whitespace-nowrap px-2.5 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-[10px] text-cyan-300 font-semibold hover:text-white transition cursor-pointer disabled:opacity-50"
                 >

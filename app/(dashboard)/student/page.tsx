@@ -1,6 +1,7 @@
 // app/(dashboard)/student/page.tsx
 // Screen 2: Student Dashboard (Home) — Full-Stack Gamified 3D Experience matching Reference Screen 2
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
@@ -11,6 +12,7 @@ import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import WellbeingCheckIn from '@/components/gamification/WellbeingCheckIn';
 import { calculateLevel } from '@/lib/gamification-engine';
 import { getRecommendedNextStep } from '@/lib/learning-engine';
+import { translations, Language } from '@/lib/i18n';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -77,7 +79,12 @@ export default async function StudentDashboardPage() {
     updated_at: user.created_at,
   };
 
-  const studentName = userProfile.full_name?.split(' ')[0] || 'Cadet';
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get('smartedu_lang')?.value as Language | undefined;
+  const currentLang: Language = cookieLang || (studentProfile?.preferred_language as Language) || 'en';
+  const t = translations[currentLang] || translations.en;
+
+  const studentName = userProfile.full_name?.split(' ')[0] || (currentLang === 'hi' ? 'कैडेट' : 'Cadet');
   const totalXp = studentProfile?.total_points || 0;
   const streak = studentProfile?.current_streak || 0;
   const coins = studentProfile?.coins || 0;
@@ -99,8 +106,8 @@ export default async function StudentDashboardPage() {
   const totalStudents = Math.max(1, totalStudentsCount || 1);
   const rankPercentile = Math.max(1, Math.round((currentRank / totalStudents) * 100));
   const rankText = totalStudents > 1 && rankPercentile <= 50 
-    ? `Top ${rankPercentile}% In Class` 
-    : `#${currentRank} In Class`;
+    ? (currentLang === 'hi' ? `शीर्ष ${rankPercentile}% कक्षा में` : `Top ${rankPercentile}% In Class`) 
+    : (currentLang === 'hi' ? `#${currentRank} कक्षा में` : `#${currentRank} In Class`);
 
   // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts, Wellbeing, Recommendations, Mastery, Diagnostic
   const todayStr = new Date().toISOString().split('T')[0];
@@ -217,18 +224,18 @@ export default async function StudentDashboardPage() {
               <div className="relative z-10">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-cyan-300 text-xs font-bold mb-3">
                   <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Cadet Learning Matrix</span>
+                  <span>{t.cadetLearningMatrix}</span>
                 </div>
 
                 <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                  Welcome back, <br className="hidden sm:inline" />
+                  {t.welcomeBack}, <br className="hidden sm:inline" />
                   <span className="bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
                     {studentName}!
                   </span>
                 </h1>
 
                 <p className="text-sm text-slate-300 mt-2 italic font-medium">
-                  "Small steps everyday lead to big results."
+                  {t.cadetQuote}
                 </p>
               </div>
 
@@ -238,7 +245,7 @@ export default async function StudentDashboardPage() {
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 active:scale-95"
                 >
                   <BookOpen className="w-4 h-4" />
-                  <span>Explore Learning Map</span>
+                  <span>{t.exploreMap}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
 
@@ -247,7 +254,7 @@ export default async function StudentDashboardPage() {
                   className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all flex items-center gap-1.5"
                 >
                   <Target className="w-4 h-4 text-cyan-400" />
-                  <span>Revision Arena</span>
+                  <span>{t.revisionArena}</span>
                 </Link>
               </div>
             </div>
@@ -264,10 +271,10 @@ export default async function StudentDashboardPage() {
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-black tracking-wider text-cyan-400">
-                        Rank Status
+                        {t.rankStatus}
                       </span>
                       <h3 className="text-xl font-black text-white leading-none">
-                        Level {levelInfo.level}
+                        {t.studentLevel} {levelInfo.level}
                       </h3>
                     </div>
                   </div>
@@ -286,7 +293,7 @@ export default async function StudentDashboardPage() {
                     />
                   </div>
                   <div className="flex justify-between text-[11px] font-semibold text-slate-400">
-                    <span>Progress to Level {levelInfo.level + 1}</span>
+                    <span>{t.progressToLevel} {levelInfo.level + 1}</span>
                     <span className="font-mono text-cyan-400">{levelInfo.progressPercent}%</span>
                   </div>
                 </div>
@@ -304,7 +311,7 @@ export default async function StudentDashboardPage() {
                     {streak}
                   </div>
                   <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                    Day Streak
+                    {t.dayStreakLabel}
                   </div>
                 </div>
 
@@ -317,7 +324,7 @@ export default async function StudentDashboardPage() {
                     {coins}
                   </div>
                   <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                    Coins
+                    {t.coinsLabel}
                   </div>
                 </div>
 
@@ -330,7 +337,7 @@ export default async function StudentDashboardPage() {
                     {rankText}
                   </div>
                   <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                    Class Rank
+                    {t.classRank}
                   </div>
                 </div>
 
@@ -357,13 +364,13 @@ export default async function StudentDashboardPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
               <div className="relative z-10">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                  Cadet Profile
+                  {t.cadetProfile}
                 </span>
                 <h3 className="text-lg font-black text-white">
                   {userProfile.full_name}
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Ready for today's learning voyage.
+                  {t.readyForVoyage}
                 </p>
               </div>
             </div>
@@ -374,7 +381,7 @@ export default async function StudentDashboardPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-400">
                     <Target className="w-4 h-4" />
-                    <span>Today's Quest</span>
+                    <span>{t.todaysQuest}</span>
                   </div>
                   {primaryQuest && (
                     <span className="text-[10px] text-slate-400 font-medium">
@@ -401,7 +408,7 @@ export default async function StudentDashboardPage() {
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold text-slate-300">
-                      <span className="text-[11px] text-slate-400">Progress</span>
+                      <span className="text-[11px] text-slate-400">{currentLang === 'hi' ? 'प्रगति' : 'Progress'}</span>
                       <span className="font-mono text-cyan-400 font-bold">
                         {primaryQuest ? (primaryQuest.progress_percent || (primaryQuest.status === 'completed' ? 100 : 0)) : 0}%
                       </span>
@@ -432,7 +439,7 @@ export default async function StudentDashboardPage() {
                   href={questTargetUrl}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 active:scale-95 transition-all"
                 >
-                  <span>Continue</span>
+                  <span>{t.continueBtn}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -456,12 +463,12 @@ export default async function StudentDashboardPage() {
                         Nova AI
                       </h4>
                       <span className="text-[10px] text-cyan-400 font-semibold">
-                        Next Best Action
+                        {t.nextBestAction}
                       </span>
                     </div>
                   </div>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold uppercase">
-                    Adaptive
+                    {t.adaptive}
                   </span>
                 </div>
 
@@ -485,7 +492,7 @@ export default async function StudentDashboardPage() {
                   className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
-                  <span>Execute Next Step</span>
+                  <span>{t.executeNextStep}</span>
                 </Link>
               </div>
             </div>
@@ -498,13 +505,13 @@ export default async function StudentDashboardPage() {
               <div className="space-y-1">
                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold uppercase tracking-wider">
                   <Award className="w-3 h-3 text-emerald-400" />
-                  <span>Real Growth Analytics</span>
+                  <span>{t.realGrowth}</span>
                 </div>
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  Conceptual Mastery vs Gamification
+                  {t.conceptualMasteryVsGamification}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Gamification rewards consistent daily effort, while Real Growth measures how your verified subject comprehension expands over time.
+                  {t.realGrowthSub}
                 </p>
               </div>
 
@@ -512,7 +519,7 @@ export default async function StudentDashboardPage() {
                 href="/student/portfolio"
                 className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-white/10 transition flex items-center gap-1.5 self-start sm:self-auto"
               >
-                <span>Full Learner Portfolio</span>
+                <span>{t.fullLearnerPortfolio}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -540,17 +547,17 @@ export default async function StudentDashboardPage() {
                             : 'bg-amber-500/20 text-amber-300'
                       }`}>
                         {!hasMasteryData && !hasBaseline
-                          ? 'Pending Diagnostic'
+                          ? t.pendingDiagnostic
                           : delta >= 0
-                            ? `+${delta}% Growth`
+                            ? `+${delta}% ${t.growth}`
                             : `${delta}%`}
                       </span>
                     </div>
 
                     <div className="space-y-1.5">
                       <div className="flex justify-between text-[11px] text-slate-400">
-                        <span>Baseline: <strong className="text-slate-300 font-mono">{hasBaseline ? `${baseline}%` : '--'}</strong></span>
-                        <span>Current: <strong className="text-emerald-400 font-mono">{hasMasteryData || hasBaseline ? `${currentScore}%` : '--'}</strong></span>
+                        <span>{currentLang === 'hi' ? 'बेसलाइन:' : 'Baseline:'} <strong className="text-slate-300 font-mono">{hasBaseline ? `${baseline}%` : '--'}</strong></span>
+                        <span>{currentLang === 'hi' ? 'वर्तमान:' : 'Current:'} <strong className="text-emerald-400 font-mono">{hasMasteryData || hasBaseline ? `${currentScore}%` : '--'}</strong></span>
                       </div>
                       <div className="relative w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
                         {/* Baseline marker */}
@@ -580,10 +587,10 @@ export default async function StudentDashboardPage() {
               <div>
                 <h2 className="text-lg font-black text-white flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-indigo-400" />
-                  Your Subject Worlds
+                  {t.yourSubjectWorlds}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Explore academic sectors and unlock chapters along your learning journey
+                  {t.exploreAcademicSectors}
                 </p>
               </div>
 
@@ -591,7 +598,7 @@ export default async function StudentDashboardPage() {
                 href="/student/map"
                 className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors"
               >
-                <span>View Full Learning Map</span>
+                <span>{t.viewFullLearningMap}</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -620,7 +627,7 @@ export default async function StudentDashboardPage() {
                         {idx === 0 ? 'π' : idx === 1 ? '⚛' : idx === 2 ? '💻' : '📖'}
                       </div>
                       <span className="text-[11px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
-                        {completedLevels}/{totalLevels} Levels
+                        {completedLevels}/{totalLevels} {t.levels}
                       </span>
                     </div>
 
@@ -633,7 +640,7 @@ export default async function StudentDashboardPage() {
 
                     <div className="space-y-1">
                       <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
-                        <span>Mastery</span>
+                        <span>{t.mastery}</span>
                         <span className="text-cyan-400 font-mono">{mastery}%</span>
                       </div>
                       <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
@@ -654,13 +661,13 @@ export default async function StudentDashboardPage() {
             <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-black text-white">Today's Missions</h3>
+                <h3 className="text-base font-black text-white">{t.todaysMissions}</h3>
               </div>
               <Link
                 href="/student/study-plan"
                 className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
               >
-                <span>Mission Control</span>
+                <span>{t.missionControl}</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -682,20 +689,20 @@ export default async function StudentDashboardPage() {
                       href="/student/revision"
                       className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold transition-all shrink-0"
                     >
-                      Start
+                      {t.start}
                     </Link>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-6">
-                <p className="text-xs text-slate-400">No missions scheduled for today yet.</p>
+                <p className="text-xs text-slate-400">{t.noMissionsScheduled}</p>
                 <Link
                   href="/student/study-plan"
                   className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold text-cyan-400 hover:underline"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>Add your first study mission</span>
+                  <span>{t.addFirstMission}</span>
                 </Link>
               </div>
             )}

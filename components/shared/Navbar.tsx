@@ -58,12 +58,12 @@ export default function Navbar({ profile }: NavbarProps) {
   };
 
   const navLinks = [
-    { href: '/student', label: 'Home' },
-    { href: '/student/map', label: 'Learning Map' },
-    { href: '/student/quests', label: 'Quests' },
-    { href: '/student/subjects', label: 'Subjects' },
-    { href: '/student/revision', label: 'Revision' },
-    { href: '/student/career', label: 'Career' },
+    { href: '/student', label: t.navHome || 'Home' },
+    { href: '/student/map', label: t.navLearningMap || 'Learning Map' },
+    { href: '/student/quests', label: t.navQuests || 'Quests' },
+    { href: '/student/subjects', label: t.navSubjects || 'Subjects' },
+    { href: '/student/revision', label: t.navRevision || 'Revision' },
+    { href: '/student/career', label: t.navCareer || 'Career' },
   ];
 
   return (
@@ -155,11 +155,23 @@ export default function Navbar({ profile }: NavbarProps) {
             {/* Accessibility Controls */}
             <AccessibilityBar />
 
-            {/* Bilingual Switcher */}
+            {/* Bilingual Switcher (English + Hindi) */}
             <button
-              onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
+              onClick={async () => {
+                const nextLang = language === 'en' ? 'hi' : 'en';
+                setLanguage(nextLang);
+                if (typeof document !== 'undefined') {
+                  document.cookie = `smartedu_lang=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+                }
+                if (profile?.id) {
+                  try {
+                    await supabase.from('student_profiles').update({ preferred_language: nextLang }).eq('id', profile.id);
+                  } catch {}
+                }
+                router.refresh();
+              }}
               aria-label="Toggle language"
-              className="hidden sm:flex px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition border border-white/10 items-center gap-1.5 min-h-[38px]"
+              className="hidden sm:flex px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold transition border border-white/10 items-center gap-1.5 min-h-[38px] cursor-pointer"
             >
               <Globe className="w-3.5 h-3.5 text-cyan-400" />
               <span>{language === 'en' ? 'EN' : 'HI'}</span>

@@ -37,7 +37,7 @@ interface MobileDrawerProps {
 export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: MobileDrawerProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { language, setLanguage } = useI18n();
+  const { language, setLanguage, t } = useI18n();
   const supabase = createClient();
 
   useEffect(() => {
@@ -91,15 +91,15 @@ export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: Mob
     }
     // Default Student: Full Gamified Navigation
     return [
-      { label: 'Home Dashboard', href: '/student', icon: Home },
-      { label: 'Learning Map', href: '/student/map', icon: Map },
-      { label: 'Quests & Missions', href: '/student/quests', icon: Zap },
-      { label: 'Subjects & Worlds', href: '/student/subjects', icon: BookOpen },
-      { label: 'Revision Arena', href: '/student/revision', icon: RefreshCw },
-      { label: 'Achievements & Badges', href: '/student/achievements', icon: Award },
-      { label: 'Leaderboard', href: '/student/leaderboard', icon: Trophy },
-      { label: 'Mission Planner', href: '/student/study-plan', icon: Calendar },
-      { label: 'Career Galaxy', href: '/student/career', icon: Compass },
+      { label: t.navHome || 'Home Dashboard', href: '/student', icon: Home },
+      { label: t.navLearningMap || 'Learning Map', href: '/student/map', icon: Map },
+      { label: t.navQuests || 'Quests & Missions', href: '/student/quests', icon: Zap },
+      { label: t.navSubjects || 'Subjects & Worlds', href: '/student/subjects', icon: BookOpen },
+      { label: t.navRevision || 'Revision Arena', href: '/student/revision', icon: RefreshCw },
+      { label: t.navAchievements || 'Achievements & Badges', href: '/student/achievements', icon: Award },
+      { label: t.navLeaderboard || 'Leaderboard', href: '/student/leaderboard', icon: Trophy },
+      { label: t.navStudyPlan || 'Mission Planner', href: '/student/study-plan', icon: Calendar },
+      { label: t.navCareer || 'Career Galaxy', href: '/student/career', icon: Compass },
     ];
   };
 
@@ -139,26 +139,19 @@ export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: Mob
           {profile && (
             <div className="px-5 py-4 bg-slate-900/60 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm uppercase shrink-0">
-                  {profile.full_name ? profile.full_name.charAt(0) : 'U'}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-sm font-bold shadow-md shadow-indigo-600/30">
+                  {profile.full_name?.charAt(0) || 'U'}
                 </div>
-                <div className="overflow-hidden">
-                  <div className="text-sm font-bold text-white truncate">
-                    {profile.full_name}
-                  </div>
-                  <div className="text-xs text-slate-400 truncate">
-                    {profile.email}
-                  </div>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    {profile.role.replace('_', ' ')}
-                  </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">{profile.full_name}</p>
+                  <p className="text-[11px] text-slate-400 truncate capitalize">{profile.role.replace('_', ' ')}</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Navigation Links */}
-          <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-270px)]">
+          <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-250px)]">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -168,13 +161,13 @@ export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: Mob
                   key={link.href}
                   href={link.href}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all min-h-[44px] ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition min-h-[44px] ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-600/30 to-indigo-600/30 text-cyan-300 border border-indigo-500/40 shadow-sm shadow-indigo-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-indigo-600/25'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                  <Icon className="w-4 h-4 shrink-0" />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -185,8 +178,20 @@ export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: Mob
         {/* Bottom Drawer Actions */}
         <div className="p-4 border-t border-white/10 space-y-2 bg-slate-900/60 pb-safe">
           <button
-            onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:text-white text-xs font-bold transition min-h-[44px]"
+            onClick={async () => {
+              const nextLang = language === 'en' ? 'hi' : 'en';
+              setLanguage(nextLang);
+              if (typeof document !== 'undefined') {
+                document.cookie = `smartedu_lang=${nextLang}; path=/; max-age=31536000; SameSite=Lax`;
+              }
+              if (profile?.id) {
+                try {
+                  await supabase.from('student_profiles').update({ preferred_language: nextLang }).eq('id', profile.id);
+                } catch {}
+              }
+              router.refresh();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 text-slate-300 hover:text-white text-xs font-bold transition min-h-[44px] cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <Globe className="w-4 h-4 text-cyan-400" />

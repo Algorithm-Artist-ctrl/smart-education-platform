@@ -136,6 +136,21 @@ export function adaptDifficulty(studentPerformance: {
 }
 
 /**
+ * Select Teaching Mode based on student profile and learning style
+ */
+export function selectTeachingMode(studentProfile: {
+  learning_style?: 'visual' | 'practice' | 'story' | string | null;
+  current_difficulty?: number;
+  accuracy?: number;
+}): 'visual' | 'practice' | 'story' {
+  if (studentProfile?.learning_style === 'visual') return 'visual';
+  if (studentProfile?.learning_style === 'story') return 'story';
+  if (studentProfile?.learning_style === 'practice') return 'practice';
+  if ((studentProfile?.accuracy ?? 100) < 60) return 'visual';
+  return 'practice';
+}
+
+/**
  * Positive Failure System
  * Transforms errors into learning opportunities with an intuitive analogy and +5 effort XP.
  */

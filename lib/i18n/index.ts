@@ -61,6 +61,45 @@ export const translations = {
     childAttendance: 'Attendance Overview',
     childWeakAreas: 'Areas Needing Attention',
 
+    // Navigation Links
+    navHome: 'Home',
+    navLearningMap: 'Learning Map',
+    navQuests: 'Quests',
+    navSubjects: 'Subjects',
+    navRevision: 'Revision',
+    navCareer: 'Career',
+    navAchievements: 'Achievements',
+    navLeaderboard: 'Leaderboard',
+    navDiagnostic: 'Diagnostic',
+    navStudyPlan: 'Study Plan',
+
+    // Real Growth & Analytics
+    realGrowth: 'Real Conceptual Growth',
+    realGrowthDesc: 'Verified topic mastery shifts compared to diagnostic baseline',
+    baselineDiagnostic: 'Baseline Diagnostic',
+    currentMastery: 'Current Mastery',
+    notEnoughData: 'Not enough data yet',
+    diagnosticPending: 'Diagnostic Pending',
+
+    // Daily Check-In & Wellbeing
+    dailyCheckIn: 'Daily Learning Check-In',
+    dailyCheckInDesc: 'How are you feeling ready to learn today?',
+    energyHigh: 'Great & Energetic',
+    energyNormal: 'Steady & Focused',
+    energyLow: 'A Bit Challenging',
+    energyTired: 'Need a Light Session',
+
+    // Quests
+    todaysQuests: "Today's Active Quests",
+    claimReward: 'Claim Reward',
+    completed: 'Completed',
+
+    // Applied Learning
+    appliedLearning: 'Applied Learning & Real World Missions',
+    exploreMissions: 'Explore Missions',
+    openLab: 'Open Creativity Lab',
+    viewPortfolio: 'View Learner Portfolio',
+
     // Applied Learning & Accessibility
     creativityLab: 'Creativity Lab',
     lifeMissions: 'Life Missions',
@@ -74,6 +113,39 @@ export const translations = {
     // Offline / Sync
     offlineNotice: 'You are currently offline. Actions will be saved and synced automatically.',
     onlineNotice: 'Back online! Synced with Supabase.',
+
+    // Cadet Dashboard & Telemetry
+    cadetLearningMatrix: 'Cadet Learning Matrix',
+    cadetQuote: '"Small steps everyday lead to big results."',
+    exploreMap: 'Explore Learning Map',
+    revisionArena: 'Revision Arena',
+    rankStatus: 'Rank Status',
+    progressToLevel: 'Progress to Level',
+    classRank: 'Class Rank',
+    coinsLabel: 'Coins',
+    dayStreakLabel: 'Day Streak',
+    cadetProfile: 'Cadet Profile',
+    readyForVoyage: "Ready for today's learning voyage.",
+    todaysQuest: "Today's Quest",
+    continueBtn: 'Continue',
+    nextBestAction: 'Next Best Action',
+    adaptive: 'Adaptive',
+    executeNextStep: 'Execute Next Step',
+    conceptualMasteryVsGamification: 'Conceptual Mastery vs Gamification',
+    realGrowthSub: 'Gamification rewards consistent daily effort, while Real Growth measures how your verified subject comprehension expands over time.',
+    fullLearnerPortfolio: 'Full Learner Portfolio',
+    pendingDiagnostic: 'Pending Diagnostic',
+    growth: 'Growth',
+    yourSubjectWorlds: 'Your Subject Worlds',
+    exploreAcademicSectors: 'Explore academic sectors and unlock chapters along your learning journey',
+    viewFullLearningMap: 'View Full Learning Map',
+    todaysMissions: "Today's Missions",
+    missionControl: 'Mission Control',
+    noMissionsScheduled: 'No missions scheduled for today yet.',
+    addFirstMission: 'Add your first study mission',
+    levels: 'Levels',
+    mastery: 'Mastery',
+    start: 'Start',
   },
   hi: {
     // Navigation & Common
@@ -93,6 +165,45 @@ export const translations = {
     emptyState: 'कोई डेटा उपलब्ध नहीं है।',
     viewAll: 'सभी देखें',
     back: 'वापस जाएं',
+
+    // Navigation Links
+    navHome: 'होम',
+    navLearningMap: 'लर्निंग मैप',
+    navQuests: 'मिशन व क्वेस्ट',
+    navSubjects: 'विषय',
+    navRevision: 'रिवीजन',
+    navCareer: 'करियर गैलेक्सी',
+    navAchievements: 'उपलब्धियां',
+    navLeaderboard: 'लीडरबोर्ड',
+    navDiagnostic: 'डायग्नोस्टिक',
+    navStudyPlan: 'अध्ययन योजना',
+
+    // Real Growth & Analytics
+    realGrowth: 'वास्तविक वैचारिक प्रगति',
+    realGrowthDesc: 'डायग्नोस्टिक बेसलाइन की तुलना में सत्यापित विषय निपुणता बदलाव',
+    baselineDiagnostic: 'बेसलाइन मूल्यांकन',
+    currentMastery: 'वर्तमान निपुणता',
+    notEnoughData: 'अभी पर्याप्त डेटा नहीं है',
+    diagnosticPending: 'मूल्यांकन लंबित',
+
+    // Daily Check-In & Wellbeing
+    dailyCheckIn: 'दैनिक अध्ययन चेक-इन',
+    dailyCheckInDesc: 'आज आप सीखने के लिए कैसा महसूस कर रहे हैं?',
+    energyHigh: 'ऊर्जावान और उत्साहित',
+    energyNormal: 'स्थिर और केंद्रित',
+    energyLow: 'थोड़ा चुनौतीपूर्ण',
+    energyTired: 'हल्के सत्र की आवश्यकता',
+
+    // Quests
+    todaysQuests: 'आज के सक्रिय मिशन',
+    claimReward: 'इनाम प्राप्त करें',
+    completed: 'पूर्ण',
+
+    // Applied Learning
+    appliedLearning: 'व्यावहारिक अध्ययन और वास्तविक जीवन मिशन',
+    exploreMissions: 'मिशन देखें',
+    openLab: 'रचनात्मकता लैब खोलें',
+    viewPortfolio: 'पोर्टफोलियो देखें',
 
     // Student Dashboard
     welcomeBack: 'वापसी पर स्वागत है',
@@ -147,6 +258,39 @@ export const translations = {
     // Offline / Sync
     offlineNotice: 'आप अभी ऑफलाइन हैं। क्रियाएं सहेजी जाएंगी और पुनः कनेक्ट होने पर सिंक होंगी।',
     onlineNotice: 'आप ऑनलाइन आ चुके हैं! डेटा सिंक हो गया है।',
+
+    // Cadet Dashboard & Telemetry
+    cadetLearningMatrix: 'कैडेट लर्निंग मैट्रिक्स',
+    cadetQuote: '"हर दिन उठाए गए छोटे कदम बड़े परिणाम लाते हैं।"',
+    exploreMap: 'लर्निंग मैप देखें',
+    revisionArena: 'रिवीजन अखाड़ा',
+    rankStatus: 'रैंक स्थिति',
+    progressToLevel: 'अगले स्तर की ओर प्रगति',
+    classRank: 'कक्षा रैंक',
+    coinsLabel: 'सिक्के',
+    dayStreakLabel: 'दैनिक स्ट्रीक',
+    cadetProfile: 'कैडेट प्रोफ़ाइल',
+    readyForVoyage: 'आज की अध्ययन यात्रा के लिए तैयार।',
+    todaysQuest: 'आज का मिशन',
+    continueBtn: 'जारी रखें',
+    nextBestAction: 'अगला सर्वश्रेष्ठ कदम',
+    adaptive: 'अनुकूली',
+    executeNextStep: 'अगला कदम शुरू करें',
+    conceptualMasteryVsGamification: 'वैचारिक निपुणता बनाम गेमिफिकेशन',
+    realGrowthSub: 'गेमिफिकेशन निरंतर दैनिक प्रयास को पुरस्कृत करता है, जबकि वास्तविक प्रगति मापती है कि समय के साथ आपकी विषय समझ कैसे बढ़ती है।',
+    fullLearnerPortfolio: 'संपूर्ण शिक्षार्थी पोर्टफोलियो',
+    pendingDiagnostic: 'मूल्यांकन लंबित',
+    growth: 'प्रगति',
+    yourSubjectWorlds: 'आपके विषय संसार',
+    exploreAcademicSectors: 'शैक्षणिक क्षेत्रों का अन्वेषण करें और अपनी अध्ययन यात्रा के अध्यायों को अनलॉक करें',
+    viewFullLearningMap: 'पूर्ण लर्निंग मैप देखें',
+    todaysMissions: 'आज के मिशन',
+    missionControl: 'मिशन नियंत्रण',
+    noMissionsScheduled: 'आज के लिए अभी कोई मिशन निर्धारित नहीं है।',
+    addFirstMission: 'अपना पहला अध्ययन मिशन जोड़ें',
+    levels: 'स्तर',
+    mastery: 'निपुणता',
+    start: 'शुरू करें',
   },
 } as const;
 

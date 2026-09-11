@@ -3,10 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { translations, Language, TranslationKey } from './index';
 
+export type TranslationObject = typeof translations['en'];
+
+export type I18nFunctionAndObject = TranslationObject & ((key: TranslationKey) => string);
+
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: TranslationKey) => string;
+  t: I18nFunctionAndObject;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -24,11 +28,17 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('smart_edu_lang', lang);
+    if (typeof document !== 'undefined') {
+      document.cookie = `smartedu_lang=${lang}; path=/; max-age=31536000; SameSite=Lax`;
+    }
   };
 
-  const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations['en'][key] || key;
+  const tFunc = (key: TranslationKey): string => {
+    return (translations[language] as any)?.[key] || (translations['en'] as any)?.[key] || (key as string);
   };
+
+  const currentTranslations = translations[language] || translations['en'];
+  const t = Object.assign(tFunc, currentTranslations) as I18nFunctionAndObject;
 
   return (
     <I18nContext.Provider value={{ language, setLanguage, t }}>
