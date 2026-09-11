@@ -107,9 +107,11 @@ export default async function StudentDashboardPage() {
   const currentRank = (higherRankCount || 0) + 1;
   const totalStudents = Math.max(1, totalStudentsCount || 1);
   const rankPercentile = Math.max(1, Math.round((currentRank / totalStudents) * 100));
-  const rankText = totalStudents > 1 && rankPercentile <= 50 
-    ? (currentLang === 'hi' ? `शीर्ष ${rankPercentile}% कक्षा में` : `Top ${rankPercentile}% In Class`) 
-    : (currentLang === 'hi' ? `#${currentRank} कक्षा में` : `#${currentRank} In Class`);
+  const rankText = totalXp === 0
+    ? (currentLang === 'hi' ? 'पर्याप्त डेटा नहीं' : 'Not enough data yet')
+    : totalStudents > 1 && rankPercentile <= 50 
+      ? (currentLang === 'hi' ? `शीर्ष ${rankPercentile}% कक्षा में` : `Top ${rankPercentile}% In Class`) 
+      : (currentLang === 'hi' ? `#${currentRank} कक्षा में` : `#${currentRank} In Class`);
 
   // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts, Wellbeing, Recommendations, Mastery, Diagnostic
   const todayStr = new Date().toISOString().split('T')[0];

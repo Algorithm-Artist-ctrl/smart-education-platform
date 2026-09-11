@@ -16,11 +16,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * GET: Server-side health check verifying environment variables, Gemini SDK, and connectivity.
+ * Returns HTTP 200 with structured diagnostic state (online, rate_limited, unconfigured, offline).
  */
 export async function GET() {
   const health = await checkGeminiHealth();
-  const statusCode = health.status === 'online' ? 200 : health.configured ? 502 : 503;
-  return NextResponse.json(health, { status: statusCode });
+  return NextResponse.json(health, { status: 200 });
 }
 
 /**
@@ -113,14 +113,19 @@ export async function POST(request: NextRequest) {
     console.log(`[AI Partner Invocation] Status: ${result.success}, Model: ${result.model}, Latency: ${latencyMs}ms`);
 
     if (!result.success || !result.text) {
+      const isRateLimited = result.errorCode === 'RATE_LIMITED';
+      const isUnconfigured = result.errorCode === 'NO_API_CONFIGURATION';
+      const isAuthError = result.errorCode === 'INVALID_API_KEY' || result.errorCode === 'UNAUTHORIZED';
+      const httpStatus = isRateLimited ? 429 : isUnconfigured ? 503 : isAuthError ? 401 : 502;
+
       return NextResponse.json(
         {
           success: false,
           error: result.error || 'AI partner is temporarily unavailable. Please try again.',
-          code: result.errorCode || 'GEMINI_SERVER_ERROR',
+          code: result.errorCode || 'ERROR',
           partnerName: context.aiPartnerName,
         },
-        { status: 502 }
+        { status: httpStatus }
       );
     }
 
@@ -200,10 +205,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: any) {
     console.error('[AI Route] General error:', err);
+    const msg = err?.message || '';
+    const isTimeout = msg.includes('timeout') || msg.includes('ETIMEDOUT');
     return NextResponse.json(
       {
         success: false,
-        error: 'Your AI Learning Partner is momentarily resetting. Please ask again in a moment.',
+        error: isTimeout
+          ? 'Request to AI Learning Partner timed out. Please try asking again.'
+          : 'Your AI Learning Partner encountered a connection delay. Please ask again in a moment.',
+        code: isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR',
       },
       { status: 500 }
     );

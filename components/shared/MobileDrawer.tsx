@@ -71,35 +71,35 @@ export default function MobileDrawer({ isOpen, onClose, profile, onLogout }: Mob
 
     if (profile.role === 'teacher') {
       return [
-        { label: 'Teacher Dashboard', href: '/teacher', icon: FileCheck },
+        { label: t.teacherDashboard || 'Teacher Dashboard', href: '/teacher', icon: FileCheck },
       ];
     }
     if (profile.role === 'parent') {
       return [
-        { label: 'Parent Portal', href: '/parent', icon: Heart },
+        { label: t.parentDashboard || 'Parent Portal', href: '/parent', icon: Heart },
       ];
     }
     if (profile.role === 'admin') {
       return [
-        { label: 'Institution Admin', href: '/admin', icon: Building2 },
+        { label: t.adminDashboard || 'Institution Admin', href: '/admin', icon: Building2 },
       ];
     }
     if (profile.role === 'super_admin') {
       return [
-        { label: 'Super Admin Center', href: '/super-admin', icon: ShieldCheck },
+        { label: t.superAdminDashboard || 'Super Admin Center', href: '/super-admin', icon: ShieldCheck },
       ];
     }
     // Default Student: Full Gamified Navigation
     return [
-      { label: t.navHome || 'Home Dashboard', href: '/student', icon: Home },
+      { label: t.navHome || 'Home', href: '/student', icon: Home },
       { label: t.navLearningMap || 'Learning Map', href: '/student/map', icon: Map },
-      { label: t.navQuests || 'Quests & Missions', href: '/student/quests', icon: Zap },
-      { label: t.navSubjects || 'Subjects & Worlds', href: '/student/subjects', icon: BookOpen },
-      { label: t.navRevision || 'Revision Arena', href: '/student/revision', icon: RefreshCw },
-      { label: t.navAchievements || 'Achievements & Badges', href: '/student/achievements', icon: Award },
+      { label: t.navQuests || 'Quests', href: '/student/quests', icon: Zap },
+      { label: t.navSubjects || 'Subjects', href: '/student/subjects', icon: BookOpen },
+      { label: t.navRevision || 'Revision', href: '/student/revision', icon: RefreshCw },
+      { label: t.navAchievements || 'Achievements', href: '/student/achievements', icon: Award },
       { label: t.navLeaderboard || 'Leaderboard', href: '/student/leaderboard', icon: Trophy },
-      { label: t.navStudyPlan || 'Mission Planner', href: '/student/study-plan', icon: Calendar },
-      { label: t.navCareer || 'Career Galaxy', href: '/student/career', icon: Compass },
+      { label: t.navStudyPlan || 'Study Plan', href: '/student/study-plan', icon: Calendar },
+      { label: t.navCareer || 'Career', href: '/student/career', icon: Compass },
     ];
   };
 

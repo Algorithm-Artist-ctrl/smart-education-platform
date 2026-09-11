@@ -18,7 +18,7 @@ export interface NovaMentorProps {
 }
 
 export function NovaMentor({
-  partnerName = 'Nova AI',
+  partnerName = 'NOVA',
   message,
   userName,
   actionLabel = 'Start Practice',
@@ -35,7 +35,7 @@ export function NovaMentor({
         <div className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-cyan-400/40 shadow-sm shadow-cyan-500/20">
           <Image
             src="/images/nova_robot.jpg"
-            alt="Nova AI Mentor"
+            alt="NOVA AI Mentor"
             fill
             className="object-cover"
           />
@@ -92,8 +92,8 @@ export function NovaMentor({
               <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <span>{partnerName}</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">
-              Study Companion
+            <span className="text-[10px] text-cyan-400 font-semibold">
+              AI Learning Companion
             </span>
           </div>
 

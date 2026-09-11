@@ -224,7 +224,7 @@ export default function OnboardingPage() {
     setErrorMsg(null);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      router.push('/login');
+      window.location.href = '/login';
       return;
     }
 
@@ -243,6 +243,7 @@ export default function OnboardingPage() {
             learning_pace: learningPace,
             class_id: classId,
             section_id: sectionId,
+            onboarding_completed: true,
           },
         });
       } catch (metaErr) {
@@ -262,22 +263,37 @@ export default function OnboardingPage() {
             learning_preferences: selectedPreferences,
             support_signals: selectedSupportSignals,
             learning_pace: learningPace,
+            onboarding_completed: true,
             updated_at: new Date().toISOString(),
           });
       } catch (spError) {
         console.warn('Student profile upsert warning:', spError);
       }
 
-      await refreshProfile();
-
-      if (proceedToDiagnostic) {
-        router.push('/student/diagnostic');
-      } else {
-        router.push('/student');
+      // 3. Sync language cookie immediately
+      if (typeof document !== 'undefined') {
+        document.cookie = `smartedu_lang=${preferredLang}; path=/; max-age=31536000; SameSite=Lax`;
+        localStorage.setItem('smart_edu_lang', preferredLang);
       }
+
+      try {
+        await refreshProfile();
+      } catch (refErr) {
+        console.warn('refreshProfile non-blocking note:', refErr);
+      }
+
+      const targetUrl = proceedToDiagnostic ? '/student/diagnostic' : '/student';
+      router.push(targetUrl);
+
+      // Robust fallback navigation in case router.push pauses
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          window.location.href = targetUrl;
+        }
+      }, 1000);
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
+      console.error('handleSaveProfile error:', err);
+      setErrorMsg(err.message || 'An unexpected error occurred while saving. Please try again.');
       setSaving(false);
     }
   };

@@ -513,9 +513,38 @@ export async function getNextBestLearningAction(
   }
 
   try {
-    // 2. Query actual topic mastery and weak areas from DB
+    // 2. Query today's Daily Check-in wellbeing signal
+    const todayDate = new Date().toISOString().split('T')[0];
+    const { data: wellbeingData } = await supabase
+      .from('wellbeing_signals')
+      .select('feeling')
+      .eq('student_id', studentId)
+      .eq('recorded_date', todayDate)
+      .maybeSingle();
+
+    const todayFeeling = wellbeingData?.feeling || null;
+
+    // 3. Query actual topic mastery and weak areas from DB
     const weakList = await getWeakTopics(supabase, studentId);
     const topWeak = weakList[0];
+
+    // Check-in Calibration: If student marked "Need a Light Session", prioritize gentle visual recap
+    if (todayFeeling === 'overwhelmed') {
+      return {
+        action: 'WATCH_EXPLANATION',
+        title: topWeak ? `Gentle Concept Refresh: ${topWeak.topic_name}` : 'Gentle Visual Exploration ☕',
+        description: 'Calibrated to your daily check-in: Nova tuned this session to be light, low-stress, and focused on intuitive visual understanding.',
+        topicId: topWeak?.topic_id,
+        topicName: topWeak?.topic_name,
+        subjectName: topWeak?.subject_name,
+        targetUrl: topWeak ? `/student/lessons?topicId=${topWeak.topic_id}` : '/student/creativity',
+        reason: 'Adjusting session intensity when energy is low prevents cognitive overload and protects retention.',
+        xpReward: 30,
+        estimatedMinutes: 6,
+        difficulty: 1,
+        scaffolding: 'guided',
+      };
+    }
 
     if (topWeak) {
       const accuracy = recentAccuracy !== undefined ? recentAccuracy : topWeak.accuracy;

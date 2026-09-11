@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Flame, Coins, Trophy, Zap } from 'lucide-react';
+import { useI18n } from '@/lib/i18n/context';
 
 interface GamificationBarProps {
   level: number;
@@ -17,25 +18,30 @@ interface GamificationBarProps {
 }
 
 export default function GamificationBar({
-  level,
+  level = 1,
   totalXp,
   currentXp,
   totalPoints,
   streak,
   streakDays,
-  coins = 100,
-  rankText = 'Top 5%',
+  coins,
+  rankText,
   className = '',
 }: GamificationBarProps) {
-  const resolvedXp = currentXp ?? totalXp ?? totalPoints ?? 350;
-  const resolvedStreak = streak ?? streakDays ?? 3;
+  const { language, t } = useI18n();
+  const resolvedXp = currentXp ?? totalXp ?? totalPoints ?? 0;
+  const resolvedStreak = streak ?? streakDays ?? 0;
+  const resolvedCoins = coins ?? 0;
+  const displayRank = rankText && rankText.trim() !== ''
+    ? rankText
+    : (language === 'hi' ? 'डेटा प्रतीक्षारत' : 'Not enough data yet');
 
   // XP formula: Each level requires level * 500 XP
   const xpForCurrentLevel = Math.max(0, (level - 1) * 500);
-  const xpForNextLevel = level * 500;
+  const xpForNextLevel = Math.max(500, level * 500);
   const currentLevelProgress = Math.max(0, resolvedXp - xpForCurrentLevel);
-  const levelSpan = xpForNextLevel - xpForCurrentLevel;
-  const progressPercent = Math.min(100, Math.max(5, Math.round((currentLevelProgress / levelSpan) * 100)));
+  const levelSpan = Math.max(1, xpForNextLevel - xpForCurrentLevel);
+  const progressPercent = resolvedXp === 0 ? 0 : Math.min(100, Math.max(3, Math.round((currentLevelProgress / levelSpan) * 100)));
 
   return (
     <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 ${className}`}>
@@ -47,10 +53,12 @@ export default function GamificationBar({
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-xs font-black shadow-md shadow-indigo-500/30">
               <Zap className="w-4 h-4 fill-white" />
             </div>
-            <span className="text-xs uppercase tracking-wider font-bold text-indigo-300">Level {level}</span>
+            <span className="text-xs uppercase tracking-wider font-bold text-indigo-300">
+              {t.studentLevel || 'Level'} {level}
+            </span>
           </div>
           <span className="text-[11px] font-semibold text-slate-300">
-            {totalXp} <span className="text-slate-400">/ {xpForNextLevel} XP</span>
+            {resolvedXp} <span className="text-slate-400">/ {xpForNextLevel} XP</span>
           </span>
         </div>
         <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden p-0.5 border border-white/5">
@@ -67,8 +75,8 @@ export default function GamificationBar({
           <Flame className="w-5 h-5 fill-white animate-pulse" />
         </div>
         <div>
-          <div className="text-lg font-black text-white leading-none mb-0.5">{streak}</div>
-          <div className="text-xs font-semibold text-orange-300">Day Streak</div>
+          <div className="text-lg font-black text-white leading-none mb-0.5">{resolvedStreak}</div>
+          <div className="text-xs font-semibold text-orange-300">{t.dayStreakLabel || 'Day Streak'}</div>
         </div>
       </div>
 
@@ -78,8 +86,8 @@ export default function GamificationBar({
           <Coins className="w-5 h-5 fill-amber-950" />
         </div>
         <div>
-          <div className="text-lg font-black text-white leading-none mb-0.5">{coins}</div>
-          <div className="text-xs font-semibold text-amber-300">Coins</div>
+          <div className="text-lg font-black text-white leading-none mb-0.5">{resolvedCoins}</div>
+          <div className="text-xs font-semibold text-amber-300">{t.coinsLabel || 'Coins'}</div>
         </div>
       </div>
 
@@ -88,9 +96,11 @@ export default function GamificationBar({
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/30 shrink-0">
           <Trophy className="w-5 h-5 fill-white" />
         </div>
-        <div>
-          <div className="text-lg font-black text-white leading-none mb-0.5">{rankText}</div>
-          <div className="text-xs font-semibold text-emerald-300">Class Rank</div>
+        <div className="min-w-0">
+          <div className="text-xs font-black text-white leading-tight mb-0.5 truncate max-w-[130px]" title={displayRank}>
+            {displayRank}
+          </div>
+          <div className="text-xs font-semibold text-emerald-300">{t.classRank || 'Class Rank'}</div>
         </div>
       </div>
     </div>

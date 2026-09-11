@@ -72,6 +72,12 @@ export const translations = {
     navLeaderboard: 'Leaderboard',
     navDiagnostic: 'Diagnostic',
     navStudyPlan: 'Study Plan',
+    navInsights: 'AI Insights',
+    navCreativity: 'Creativity Lab',
+    navMissions: 'Life Missions',
+    navPortfolio: 'Portfolio',
+    navMyLearning: 'My Learning',
+    navProfile: 'Profile',
 
     // Real Growth & Analytics
     realGrowth: 'Real Conceptual Growth',
@@ -172,11 +178,17 @@ export const translations = {
     navQuests: 'मिशन व क्वेस्ट',
     navSubjects: 'विषय',
     navRevision: 'रिवीजन',
-    navCareer: 'करियर गैलेक्सी',
+    navCareer: 'करियर',
     navAchievements: 'उपलब्धियां',
     navLeaderboard: 'लीडरबोर्ड',
     navDiagnostic: 'डायग्नोस्टिक',
     navStudyPlan: 'अध्ययन योजना',
+    navInsights: 'AI अंतर्दृष्टि',
+    navCreativity: 'रचनात्मकता लैब',
+    navMissions: 'जीवन मिशन',
+    navPortfolio: 'पोर्टफोलियो',
+    navMyLearning: 'मेरा अध्ययन',
+    navProfile: 'प्रोफ़ाइल',
 
     // Real Growth & Analytics
     realGrowth: 'वास्तविक वैचारिक प्रगति',

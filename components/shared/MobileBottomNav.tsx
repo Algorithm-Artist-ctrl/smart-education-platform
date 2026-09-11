@@ -3,10 +3,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/context';
 import { Home, Map, Zap, Sparkles, User } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   const handleNavClick = (e: React.MouseEvent, isNova?: boolean) => {
     if (isNova) {
@@ -24,32 +26,32 @@ export default function MobileBottomNav() {
 
   const navItems = [
     {
-      label: 'Home',
+      label: t.navHome || 'Home',
       href: '/student',
       icon: Home,
       isActive: pathname === '/student',
     },
     {
-      label: 'Map',
+      label: t.navLearningMap || 'Map',
       href: '/student/map',
       icon: Map,
       isActive: pathname.startsWith('/student/map'),
     },
     {
-      label: 'Quests',
+      label: t.navQuests || 'Quests',
       href: '/student/quests',
       icon: Zap,
       isActive: pathname.startsWith('/student/quests'),
     },
     {
-      label: 'Nova',
+      label: 'NOVA',
       href: '#nova',
       icon: Sparkles,
       isActive: false,
       isNova: true,
     },
     {
-      label: 'Profile',
+      label: t.navProfile || 'Profile',
       href: '/student/achievements',
       icon: User,
       isActive: pathname.startsWith('/student/achievements'),

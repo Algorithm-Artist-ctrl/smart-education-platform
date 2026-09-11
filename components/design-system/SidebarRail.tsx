@@ -4,6 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/context';
 import { 
   Home, 
   Map, 
@@ -21,18 +22,19 @@ import {
 
 export function SidebarRail({ className = '' }: { className?: string }) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   const navItems = [
-    { href: '/student', label: 'Home', icon: <Home className="w-5 h-5" /> },
-    { href: '/student/insights', label: 'AI Insights', icon: <Sparkles className="w-5 h-5" /> },
-    { href: '/student/map', label: 'Learning Map', icon: <Map className="w-5 h-5" /> },
-    { href: '/student/creativity', label: 'Creativity Lab', icon: <Palette className="w-5 h-5" /> },
-    { href: '/student/missions', label: 'Life Missions', icon: <Globe className="w-5 h-5" /> },
-    { href: '/student/portfolio', label: 'Portfolio', icon: <Layers className="w-5 h-5" /> },
-    { href: '/student/quests', label: 'Quests', icon: <Target className="w-5 h-5" /> },
-    { href: '/student/learning', label: 'My Learning', icon: <BookOpen className="w-5 h-5" /> },
-    { href: '/student/revision', label: 'Revision', icon: <RefreshCw className="w-5 h-5" /> },
-    { href: '/student/career', label: 'Career', icon: <Compass className="w-5 h-5" /> },
+    { href: '/student', label: t.navHome || 'Home', icon: <Home className="w-5 h-5" /> },
+    { href: '/student/insights', label: t.navInsights || 'AI Insights', icon: <Sparkles className="w-5 h-5" /> },
+    { href: '/student/map', label: t.navLearningMap || 'Learning Map', icon: <Map className="w-5 h-5" /> },
+    { href: '/student/creativity', label: t.navCreativity || 'Creativity Lab', icon: <Palette className="w-5 h-5" /> },
+    { href: '/student/missions', label: t.navMissions || 'Life Missions', icon: <Globe className="w-5 h-5" /> },
+    { href: '/student/portfolio', label: t.navPortfolio || 'Portfolio', icon: <Layers className="w-5 h-5" /> },
+    { href: '/student/quests', label: t.navQuests || 'Quests', icon: <Target className="w-5 h-5" /> },
+    { href: '/student/learning', label: t.navMyLearning || 'My Learning', icon: <BookOpen className="w-5 h-5" /> },
+    { href: '/student/revision', label: t.navRevision || 'Revision', icon: <RefreshCw className="w-5 h-5" /> },
+    { href: '/student/career', label: t.navCareer || 'Career', icon: <Compass className="w-5 h-5" /> },
   ];
 
   return (

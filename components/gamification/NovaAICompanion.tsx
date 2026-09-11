@@ -21,6 +21,19 @@ import {
 } from 'lucide-react';
 import AIPartnerSettingsModal from './AIPartnerSettingsModal';
 
+export type AIState =
+  | 'IDLE'
+  | 'LOADING'
+  | 'STREAMING'
+  | 'SUCCESS'
+  | 'ERROR'
+  | 'RATE_LIMITED'
+  | 'NO_API_CONFIGURATION'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'UNAUTHORIZED'
+  | 'EMPTY_RESPONSE';
+
 interface NovaAICompanionProps {
   partnerName?: string;
   weakTopicName?: string | null;
@@ -57,9 +70,16 @@ export default function NovaAICompanion({
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [aiState, setAiState] = useState<AIState>('IDLE');
+  const [lastPromptRetry, setLastPromptRetry] = useState<{ text: string; action?: string } | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [speakingMsgIndex, setSpeakingMsgIndex] = useState<number | null>(null);
-  const [aiHealth, setAiHealth] = useState<{ status: 'checking' | 'online' | 'offline'; message?: string; model?: string }>({ status: 'checking' });
+  const [aiHealth, setAiHealth] = useState<{
+    status: 'checking' | 'online' | 'rate_limited' | 'unconfigured' | 'offline';
+    message?: string;
+    model?: string;
+    code?: string;
+  }>({ status: 'checking' });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -100,23 +120,49 @@ export default function NovaAICompanion({
     return () => window.removeEventListener('ai-partner-updated', handlePartnerUpdated);
   }, []);
 
-  // Poll server-side health of Nova AI (Gemini client & key verification)
+  // Check server-side health of Nova AI (Gemini client & key verification)
   useEffect(() => {
     let isMounted = true;
     async function checkHealth() {
       try {
         const res = await fetch('/api/ai/nova');
         const data = await res.json();
-        if (isMounted) {
+        if (!isMounted) return;
+
+        if (data.status === 'online') {
           setAiHealth({
-            status: data.status === 'online' ? 'online' : 'offline',
-            message: data.message,
+            status: 'online',
             model: data.model,
+            message: data.message,
           });
+          setAiState((prev) => (prev === 'LOADING' ? 'LOADING' : 'IDLE'));
+        } else if (data.status === 'unconfigured' || data.code === 'NO_API_CONFIGURATION') {
+          setAiHealth({
+            status: 'unconfigured',
+            message: data.message,
+            code: 'NO_API_CONFIGURATION',
+          });
+          setAiState('NO_API_CONFIGURATION');
+        } else if (data.status === 'rate_limited' || data.code === 'RATE_LIMITED') {
+          setAiHealth({
+            status: 'rate_limited',
+            message: data.message,
+            code: 'RATE_LIMITED',
+          });
+          setAiState('RATE_LIMITED');
+        } else {
+          setAiHealth({
+            status: 'offline',
+            message: data.message,
+            code: data.code || 'NETWORK_ERROR',
+          });
+          if (data.code === 'INVALID_API_KEY' || data.code === 'UNAUTHORIZED') {
+            setAiState('UNAUTHORIZED');
+          }
         }
       } catch {
         if (isMounted) {
-          setAiHealth({ status: 'offline', message: 'Unable to connect to AI partner service' });
+          setAiHealth({ status: 'offline', message: 'Unable to connect to AI partner service', code: 'NETWORK_ERROR' });
         }
       }
     }
@@ -170,7 +216,12 @@ export default function NovaAICompanion({
       ? `Hi ${studentName}! I'm ${currentPartnerName}, your personal AI learning partner. I noticed you could boost your mastery on "${weakTopicName}". Ready to explore it together or try a quick practice question?`
       : `Greetings ${studentName}! I'm ${currentPartnerName}, your personal AI learning partner. Ask me anything about ${recommendedSubject}, homework problems, or formulas you'd like to understand!`;
 
-  const [messages, setMessages] = useState<Array<{ sender: 'nova' | 'user'; text: string }>>([
+  const [messages, setMessages] = useState<Array<{
+    sender: 'nova' | 'user';
+    text: string;
+    isError?: boolean;
+    errorCode?: string;
+  }>>([
     {
       sender: 'nova',
       text: initialGreeting,
@@ -294,10 +345,12 @@ export default function NovaAICompanion({
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    setLastPromptRetry({ text: userText, action: actionType });
     const newMessages = [...messages, { sender: 'user' as const, text: userText }];
     setMessages(newMessages);
     setInputVal('');
     setIsLoading(true);
+    setAiState('LOADING');
 
     try {
       const res = await fetch('/api/ai/nova', {
@@ -329,14 +382,42 @@ export default function NovaAICompanion({
       const data = await res.json();
       if (data.success && data.reply) {
         setMessages((prev) => [...prev, { sender: 'nova', text: data.reply }]);
+        setAiState('SUCCESS');
+        setAiHealth({ status: 'online', model: data.model, message: 'AI cortex online' });
       } else {
+        const code = (data.code || (res.status === 429 ? 'RATE_LIMITED' : res.status === 503 ? 'NO_API_CONFIGURATION' : res.status === 401 ? 'UNAUTHORIZED' : 'ERROR')) as AIState;
+        setAiState(code);
+        setAiHealth((prev) => ({
+          ...prev,
+          status: code === 'RATE_LIMITED' ? 'rate_limited' : code === 'NO_API_CONFIGURATION' ? 'unconfigured' : 'offline',
+          message: data.error,
+          code,
+        }));
+
+        let displayErr = data.error;
+        if (!displayErr) {
+          if (code === 'RATE_LIMITED') {
+            displayErr = language === 'hi'
+              ? 'Google Gemini दर सीमा पूरी हो गई है। कृपया 30 सेकंड बाद पुनः प्रयास करें।'
+              : 'Gemini API quota rate limit reached (15 RPM). Please wait ~30 seconds and retry.';
+          } else if (code === 'NO_API_CONFIGURATION') {
+            displayErr = language === 'hi'
+              ? 'सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है। कृपया Render एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY जोड़ें।'
+              : 'GEMINI_API_KEY is not configured on the server. Please add GEMINI_API_KEY in Render environment settings.';
+          } else {
+            displayErr = language === 'hi'
+              ? `${currentPartnerName} से जुड़ने में विलंब हुआ। कृपया नीचे दिए गए बटन से पुनः प्रयास करें।`
+              : `${currentPartnerName} connection paused. Please click Retry below to continue.`;
+          }
+        }
+
         setMessages((prev) => [
           ...prev,
           {
             sender: 'nova',
-            text: data.error || (language === 'hi' 
-              ? `${currentPartnerName} अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।`
-              : `${currentPartnerName} is temporarily unavailable. Please try again.`),
+            text: displayErr,
+            isError: true,
+            errorCode: code,
           },
         ]);
       }
@@ -344,13 +425,16 @@ export default function NovaAICompanion({
       if (err.name === 'AbortError') {
         return; // Request cleanly cancelled
       }
+      setAiState('NETWORK_ERROR');
       setMessages((prev) => [
         ...prev,
         {
           sender: 'nova',
           text: language === 'hi'
-            ? `${currentPartnerName} अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।`
-            : `${currentPartnerName} is temporarily unavailable. Please try again.`,
+            ? 'नेटवर्क कनेक्शन में समस्या हुई। कृपया इंटरनेट जांचें और पुनः प्रयास करें।'
+            : 'Network connection issue communicating with AI service. Please check connection and retry.',
+          isError: true,
+          errorCode: 'NETWORK_ERROR',
         },
       ]);
     } finally {
@@ -386,7 +470,7 @@ export default function NovaAICompanion({
                 </div>
               </div>
               <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-slate-950 rounded-full ${
-                aiHealth.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                aiHealth.status === 'online' || aiState === 'SUCCESS' ? 'bg-emerald-400 animate-pulse' : aiHealth.status === 'rate_limited' || aiHealth.status === 'unconfigured' ? 'bg-amber-400' : 'bg-cyan-400'
               }`} />
             </div>
 
@@ -441,7 +525,7 @@ export default function NovaAICompanion({
             {currentPartnerName}
           </span>
           <span className={`w-2.5 h-2.5 rounded-full absolute -top-0.5 -right-0.5 border-2 border-slate-950 ${
-            aiHealth.status === 'online' ? 'bg-emerald-400 animate-pulse' : aiHealth.status === 'checking' ? 'bg-amber-400' : 'bg-rose-400'
+            aiHealth.status === 'online' || aiState === 'SUCCESS' ? 'bg-emerald-400 animate-pulse' : aiHealth.status === 'rate_limited' || aiHealth.status === 'unconfigured' ? 'bg-amber-400' : 'bg-cyan-400'
           }`} />
         </button>
       )}
@@ -463,23 +547,37 @@ export default function NovaAICompanion({
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                    <span className="truncate max-w-[180px]">{currentPartnerName}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
-                      aiHealth.status === 'online'
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : aiHealth.status === 'checking'
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                          : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                    <span className="truncate max-w-[200px]">
+                      {currentPartnerName === 'Nova' ? 'NOVA' : currentPartnerName}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border transition-all ${
+                      aiState === 'LOADING'
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 animate-pulse'
+                        : aiState === 'RATE_LIMITED' || aiHealth.status === 'rate_limited'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : aiState === 'NO_API_CONFIGURATION' || aiHealth.status === 'unconfigured'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : aiState === 'UNAUTHORIZED'
+                              ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              : aiHealth.status === 'online' || aiState === 'SUCCESS' || aiState === 'IDLE'
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : 'bg-slate-700/40 text-slate-300 border-white/10'
                     }`}>
-                      {aiHealth.status === 'online'
-                        ? (language === 'hi' ? 'ऑनलाइन' : 'ONLINE')
-                        : aiHealth.status === 'checking'
-                          ? (language === 'hi' ? 'जांच जारी...' : 'CONNECTING...')
-                          : (language === 'hi' ? 'अस्थायी रूप से अनुपलब्ध' : 'TEMPORARILY UNAVAILABLE')}
+                      {aiState === 'LOADING'
+                        ? (language === 'hi' ? 'सोच रहा है...' : 'THINKING...')
+                        : aiState === 'RATE_LIMITED' || aiHealth.status === 'rate_limited'
+                          ? (language === 'hi' ? 'कोटा सीमा' : 'RATE LIMITED')
+                          : aiState === 'NO_API_CONFIGURATION' || aiHealth.status === 'unconfigured'
+                            ? (language === 'hi' ? 'कुंजी आवश्यक' : 'KEY REQUIRED')
+                            : aiState === 'UNAUTHORIZED'
+                              ? (language === 'hi' ? 'कुंजी जांचें' : 'KEY CHECK')
+                              : aiHealth.status === 'online' || aiState === 'SUCCESS' || aiState === 'IDLE'
+                                ? (language === 'hi' ? 'सक्रिय' : 'ONLINE')
+                                : (language === 'hi' ? 'सक्रिय' : 'STANDBY')}
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {language === 'hi' ? 'स्मार्ट एडु व्यक्तिगत अध्ययन साथी' : 'Personalized Smart Edu Study Mentor'}
+                  <p className="text-[11px] text-cyan-300/80 font-medium">
+                    {language === 'hi' ? 'स्मार्ट एडु AI लर्निंग कंपैनियन' : 'Smart Edu AI Learning Companion'}
                   </p>
                 </div>
               </div>
@@ -519,20 +617,41 @@ export default function NovaAICompanion({
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap relative group ${
+                    className={`max-w-[88%] rounded-2xl px-4 py-3 text-xs leading-relaxed whitespace-pre-wrap relative group ${
                       msg.sender === 'user'
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                        : 'bg-slate-800/90 text-slate-200 border border-white/10'
+                        : msg.isError
+                          ? 'bg-rose-950/40 text-rose-200 border border-rose-500/40 shadow-md'
+                          : 'bg-slate-800/90 text-slate-200 border border-white/10'
                     }`}
                   >
                     {msg.text}
 
+                    {/* Retry button for failed prompt */}
+                    {msg.isError && lastPromptRetry && (
+                      <div className="mt-2.5 pt-2 border-t border-rose-500/20 flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-rose-300/80 font-medium">
+                          {msg.errorCode === 'RATE_LIMITED'
+                            ? (language === 'hi' ? '30 सेकंड बाद पुनः प्रयास करें' : 'Quota resets shortly')
+                            : (language === 'hi' ? 'आप पुनः प्रयास कर सकते हैं' : 'Tap to try again')}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSend(lastPromptRetry.text, lastPromptRetry.action)}
+                          className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 border border-rose-400/40 text-rose-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <Sparkles className="w-3 h-3" />
+                          <span>{language === 'hi' ? 'पुनः प्रयास करें' : 'Retry Query'}</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Speaker icon for reading Nova text aloud */}
-                    {msg.sender === 'nova' && (
+                    {msg.sender === 'nova' && !msg.isError && (
                       <button
                         type="button"
                         onClick={() => speakText(msg.text, i)}
-                        className="absolute -bottom-2 -right-2 p-1 rounded-full bg-slate-700 hover:bg-cyan-600 text-slate-300 hover:text-white transition shadow border border-white/10"
+                        className="absolute -bottom-2 -right-2 p-1 rounded-full bg-slate-700 hover:bg-cyan-600 text-slate-300 hover:text-white transition shadow border border-white/10 cursor-pointer"
                         title={speakingMsgIndex === i ? 'Stop reading' : 'Read aloud'}
                       >
                         {speakingMsgIndex === i ? (
@@ -546,18 +665,35 @@ export default function NovaAICompanion({
                 </div>
               ))}
 
-              {/* Truthful Diagnostic Notice */}
-              {aiHealth.status === 'offline' && messages.length <= 1 && (
+              {/* Actionable Setup Notice (only if API key is unconfigured) */}
+              {aiHealth.status === 'unconfigured' && messages.length <= 1 && (
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2.5 animate-in fade-in duration-200">
                   <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-amber-300">
-                      {language === 'hi' ? `${currentPartnerName} स्थिति: अस्थायी रूप से अनुपलब्ध` : `${currentPartnerName} Status: Temporarily Unavailable`}
+                      {language === 'hi' ? 'GEMINI_API_KEY कॉन्फ़िगरेशन सूचना' : 'Gemini AI Configuration Notice'}
                     </p>
                     <p className="text-amber-200/80 text-[10px] mt-0.5 leading-relaxed">
-                      {aiHealth.message || (language === 'hi'
-                        ? 'सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है। कृपया Render एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।'
-                        : 'GEMINI_API_KEY is not configured or reachable on the server. Please set GEMINI_API_KEY in your deployment environment.')}
+                      {language === 'hi'
+                        ? 'लाइव उत्तरों के लिए सर्वर पर GEMINI_API_KEY सेट करें। Render डिप्लॉयमेंट एनवायरनमेंट में GEMINI_API_KEY जोड़ें।'
+                        : 'GEMINI_API_KEY is not configured in server deployment variables. Please add GEMINI_API_KEY in Render deployment settings.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Rate limit advisory */}
+              {aiHealth.status === 'rate_limited' && messages.length <= 1 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2.5 animate-in fade-in duration-200">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-bold text-amber-300">
+                      {language === 'hi' ? 'कोटा दर सीमा (15 अनुरोध/मिनट)' : 'Free Quota Rate Limit'}
+                    </p>
+                    <p className="text-amber-200/80 text-[10px] mt-0.5 leading-relaxed">
+                      {language === 'hi'
+                        ? 'Google Gemini की अस्थायी दर सीमा पूरी हो गई है। लगभग 30 सेकंड बाद पुनः प्रश्न पूछें।'
+                        : 'Google Gemini Free tier quota reached. Please wait ~30 seconds and click any question to resume.'}
                     </p>
                   </div>
                 </div>
