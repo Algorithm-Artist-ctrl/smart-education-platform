@@ -36,7 +36,7 @@ export async function GET() {
       {
         status: 'offline',
         configured: false,
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         sdk: '@google/genai',
         message: 'GEMINI_API_KEY is not configured on the server. Please set GEMINI_API_KEY in your deployment environment.',
       },
@@ -46,34 +46,51 @@ export async function GET() {
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    // Lightweight verification call
-    const testResponse = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: 'ping',
-      config: {
-        maxOutputTokens: 10,
-        temperature: 0.1,
-      },
-    });
+    // Preferred model cascade: gemini-3.6-flash, gemini-3.8-flash, gemini-2.5-flash
+    const modelsToTest = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+    let workingModel = '';
+    let responseText = '';
+    let lastError: any = null;
 
-    const isHealthy = !!testResponse?.text;
+    for (const model of modelsToTest) {
+      try {
+        const testResponse = await ai.models.generateContent({
+          model,
+          contents: 'Reply with exactly: NOVA_OK',
+          config: {
+            maxOutputTokens: 10,
+            temperature: 0.1,
+          },
+        });
+        if (testResponse?.text && testResponse.text.trim()) {
+          workingModel = model;
+          responseText = testResponse.text.trim();
+          break;
+        }
+      } catch (err: any) {
+        lastError = err;
+      }
+    }
 
-    return NextResponse.json({
-      status: isHealthy ? 'online' : 'degraded',
-      configured: true,
-      model: 'gemini-2.5-flash',
-      sdk: '@google/genai',
-      message: isHealthy 
-        ? 'Nova AI neural cortex is active, connected to Gemini 2.5 Flash.'
-        : 'Gemini client connected, but response was empty.',
-    });
+    if (workingModel && responseText) {
+      return NextResponse.json({
+        status: 'online',
+        configured: true,
+        model: workingModel,
+        sdk: '@google/genai',
+        pingResponse: responseText,
+        message: `Nova AI neural cortex is active, connected to ${workingModel}.`,
+      });
+    }
+
+    throw lastError || new Error('No supported Gemini models returned a valid response');
   } catch (err: any) {
     console.error('Nova AI health check error:', err?.message || err);
     return NextResponse.json(
       {
         status: 'offline',
         configured: true,
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         sdk: '@google/genai',
         error: err?.message || 'Failed to communicate with Gemini API',
         message: 'Gemini API key is set, but the API request failed. Verify key permissions or quota.',
@@ -92,6 +109,7 @@ export async function POST(request: NextRequest) {
 
     // Secure server-side API key retrieval (never exposed to client)
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_KEY;
+    console.log(`[Nova AI] Server invocation - GEMINI_API_KEY configured: ${Boolean(apiKey)}`);
 
     const body = await request.json();
     const { 
@@ -129,11 +147,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!apiKey) {
-      let configMsg = "Nova AI cortex is currently awaiting GEMINI_API_KEY on the server. Please configure GEMINI_API_KEY in your environment variables.";
+      let configMsg = "Nova is temporarily unavailable. GEMINI_API_KEY is not configured on the server.";
       if (detectedMode === 'hinglish') {
-        configMsg = "Nova AI cortex ko server par GEMINI_API_KEY ki zaroorat hai. Please environment variables me GEMINI_API_KEY set karein.";
+        configMsg = "Nova abhi uplabdh nahi hai. Server par GEMINI_API_KEY configure nahi hai.";
       } else if (detectedMode === 'devanagari') {
-        configMsg = "नोवा AI कॉर्टेक्स को सर्वर पर GEMINI_API_KEY की आवश्यकता है। कृपया एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।";
+        configMsg = "नोवा अभी उपलब्ध नहीं है। सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है।";
       }
 
       return NextResponse.json(
@@ -318,7 +336,8 @@ Core Companion Rules:
 
     // Execute server-side Gemini request via official @google/genai SDK
     const ai = new GoogleGenAI({ apiKey });
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
+    // Preferred model cascade: gemini-3.6-flash, gemini-3.8-flash, gemini-2.5-flash
+    const modelsToTry = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'];
     let lastError: any = null;
     let replyText = '';
     let usedModel = '';
@@ -350,23 +369,38 @@ Core Companion Rules:
 
     if (!replyText) {
       const rawErrMsg = lastError?.message || 'Gemini service encountered an error';
-      console.error('Gemini API call failed across models:', rawErrMsg);
+      console.error('[Nova AI Server Error] Gemini API call failed across models:', rawErrMsg);
 
-      // Truthful error classification
-      let studentFacingError = 'Nova AI is momentarily unable to reach Gemini services. Please try again.';
-      if (rawErrMsg.includes('API_KEY_INVALID') || rawErrMsg.includes('403') || rawErrMsg.includes('PERMISSION_DENIED')) {
-        studentFacingError = 'The configured Gemini API key is invalid or lacks required permissions.';
+      // Safe, differentiated student-facing error states
+      let studentFacingError = 'Nova is temporarily unavailable. Please try again.';
+      let errorCode = 'GEMINI_SERVER_ERROR';
+
+      if (rawErrMsg.includes('API_KEY_INVALID') || (rawErrMsg.includes('400') && rawErrMsg.includes('API key not valid'))) {
+        studentFacingError = 'Invalid Gemini API key configured on server. Please verify Render environment variables.';
+        errorCode = 'INVALID_API_KEY';
+      } else if (rawErrMsg.includes('403') || rawErrMsg.includes('PERMISSION_DENIED')) {
+        studentFacingError = 'Unauthorized: The configured Gemini API key lacks permission for this request.';
+        errorCode = 'UNAUTHORIZED';
+      } else if (rawErrMsg.includes('NOT_FOUND') || rawErrMsg.includes('404') || rawErrMsg.includes('not supported') || rawErrMsg.includes('is not found')) {
+        studentFacingError = 'Selected Gemini model is currently not available for this account.';
+        errorCode = 'MODEL_NOT_FOUND';
       } else if (rawErrMsg.includes('RESOURCE_EXHAUSTED') || rawErrMsg.includes('429')) {
-        studentFacingError = 'Gemini API quota rate limit reached. Please wait a few seconds before asking again.';
-      } else if (rawErrMsg.includes('NOT_FOUND') || rawErrMsg.includes('404')) {
-        studentFacingError = 'Selected Gemini model is currently not supported for this account.';
+        studentFacingError = 'Gemini API rate limit or quota reached. Please wait a moment before asking again.';
+        errorCode = 'QUOTA_EXCEEDED';
+      } else if (rawErrMsg.includes('fetch failed') || rawErrMsg.includes('ECONNREFUSED') || rawErrMsg.includes('ENOTFOUND') || rawErrMsg.includes('ETIMEDOUT')) {
+        studentFacingError = 'Network error communicating with Gemini services. Please try again.';
+        errorCode = 'NETWORK_ERROR';
+      } else if (rawErrMsg.includes('INVALID_ARGUMENT')) {
+        studentFacingError = 'Invalid request parameters sent to Gemini.';
+        errorCode = 'INVALID_REQUEST';
       }
 
       return NextResponse.json(
         {
           success: false,
           error: studentFacingError,
-          rawError: process.env.NODE_ENV === 'development' ? rawErrMsg : undefined,
+          code: errorCode,
+          model: usedModel || modelsToTry[0],
         },
         { status: 502 }
       );

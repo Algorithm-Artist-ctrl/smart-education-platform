@@ -259,8 +259,8 @@ export default function NovaAICompanion({
           {
             sender: 'nova',
             text: data.error || (language === 'hi' 
-              ? 'मुझे उत्तर तैयार करने में समस्या आ रही है। कृपया पुनः प्रयास करें।'
-              : "I'm having trouble retrieving that from my knowledge cortex right now. Please try asking again!"),
+              ? 'नोवा अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।'
+              : 'Nova is temporarily unavailable. Please try again.'),
           },
         ]);
       }
@@ -273,8 +273,8 @@ export default function NovaAICompanion({
         {
           sender: 'nova',
           text: language === 'hi'
-            ? 'सर्वर से संपर्क नहीं हो सका। कृपया अपना नेटवर्क जांचें।'
-            : "I couldn't reach the server right now. Please check your network connection and try again!",
+            ? 'नोवा अभी उपलब्ध नहीं है। कृपया पुनः प्रयास करें।'
+            : 'Nova is temporarily unavailable. Please try again.',
         },
       ]);
     } finally {
@@ -310,7 +310,9 @@ export default function NovaAICompanion({
                   />
                 </div>
               </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-slate-950 rounded-full" />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-slate-950 rounded-full ${
+                aiHealth.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+              }`} />
             </div>
 
             {/* Dialogue & CTA */}
@@ -395,10 +397,10 @@ export default function NovaAICompanion({
                           : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
                     }`}>
                       {aiHealth.status === 'online'
-                        ? (language === 'hi' ? 'ऑनलाइन' : 'Online')
+                        ? (language === 'hi' ? 'ऑनलाइन' : 'ONLINE')
                         : aiHealth.status === 'checking'
-                          ? (language === 'hi' ? 'जांच जारी...' : 'Connecting...')
-                          : (language === 'hi' ? 'ऑफ़लाइन' : 'Offline / Config Pending')}
+                          ? (language === 'hi' ? 'जांच जारी...' : 'CONNECTING...')
+                          : (language === 'hi' ? 'अस्थायी रूप से अनुपलब्ध' : 'TEMPORARILY UNAVAILABLE')}
                     </span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
@@ -461,11 +463,11 @@ export default function NovaAICompanion({
                   <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold text-amber-300">
-                      {language === 'hi' ? 'नोवा AI स्थिति: ऑफ़लाइन' : 'Nova AI Status: Offline'}
+                      {language === 'hi' ? 'नोवा AI स्थिति: अस्थायी रूप से अनुपलब्ध' : 'Nova AI Status: Temporarily Unavailable'}
                     </p>
                     <p className="text-amber-200/80 text-[10px] mt-0.5 leading-relaxed">
                       {aiHealth.message || (language === 'hi'
-                        ? 'सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है। कृपया एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।'
+                        ? 'सर्वर पर GEMINI_API_KEY कॉन्फ़िगर नहीं है। कृपया Render एनवायरनमेंट सेटिंग्स में GEMINI_API_KEY सेट करें।'
                         : 'GEMINI_API_KEY is not configured or reachable on the server. Please set GEMINI_API_KEY in your deployment environment.')}
                     </p>
                   </div>
