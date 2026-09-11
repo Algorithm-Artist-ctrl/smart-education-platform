@@ -1,7 +1,7 @@
 // components/landing/ExactLandingPage.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -31,12 +31,101 @@ interface ExactLandingPageProps {
 
 export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState('EN');
+  const [currentLang, setCurrentLang] = useState<'EN' | 'HI'>('EN');
 
-  const languages = [
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/(?:^|;\s*)smartedu_lang=([^;]+)/);
+      if (match && match[1]?.toLowerCase() === 'hi') {
+        setCurrentLang('HI');
+      }
+    }
+  }, []);
+
+  const handleSelectLang = (code: 'EN' | 'HI') => {
+    setCurrentLang(code);
+    if (typeof document !== 'undefined') {
+      document.cookie = `smartedu_lang=${code.toLowerCase()}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+    setLangMenuOpen(false);
+  };
+
+  const languages: Array<{ code: 'EN' | 'HI'; label: string }> = [
     { code: 'EN', label: 'English' },
     { code: 'HI', label: 'Hindi (हिंदी)' },
   ];
+
+  const t = currentLang === 'HI' ? {
+    tagline: 'सीखें · खेलें · आगे बढ़ें',
+    home: 'होम',
+    features: 'सुविधाएं',
+    forStudents: 'विद्यार्थियों के लिए',
+    forTeachers: 'शिक्षकों के लिए',
+    forParents: 'अभिभावकों के लिए',
+    forInstitutions: 'संस्थानों के लिए',
+    about: 'हमारे बारे में',
+    logIn: 'लॉग इन',
+    signUp: 'साइन अप',
+    pill: 'इंटरैक्टिव · व्यक्तिगत · AI-संचालित',
+    heroLine1: 'पढ़ाई को',
+    heroLine2: 'बनाएं एक नया',
+    heroLine3: 'रोमांच।',
+    subtitle: 'व्यक्तिगत शिक्षण, गेमिफाइड अनुभव, और AI-संचालित मार्गदर्शन — सब एक ही आधुनिक मंच पर।',
+    startJourney: 'अपनी यात्रा शुरू करें',
+    exploreDemo: 'डेमो देखें',
+    students: 'विद्यार्थी',
+    resources: 'संसाधन',
+    performance: 'प्रदर्शन',
+    novaCompanion: 'नोवा AI साथी',
+    mathWorld: 'गणित',
+    scienceWorld: 'विज्ञान',
+    csWorld: 'कंप्यूटर साइंस',
+    futureSignpost1: 'आपका भविष्य',
+    futureSignpost2: 'यहाँ से शुरू होता है',
+    card1Title: 'गेमिफाइड शिक्षण',
+    card1Desc: 'पढ़ाई को बनाएं एक रोमांचक सफर',
+    card2Title: 'व्यक्तिगत मार्ग',
+    card2Desc: 'अपनी गति से सीखें',
+    card3Title: 'AI अध्ययन मार्गदर्शक',
+    card3Desc: 'आपका सदैव उपलब्ध गाइड',
+    card4Title: 'उज्ज्वल भविष्य',
+    card4Desc: 'कल के लिए कौशल बनाएं',
+  } : {
+    tagline: 'Learn · Play · Grow',
+    home: 'Home',
+    features: 'Features',
+    forStudents: 'For Students',
+    forTeachers: 'For Teachers',
+    forParents: 'For Parents',
+    forInstitutions: 'For Institutions',
+    about: 'About',
+    logIn: 'Log In',
+    signUp: 'Sign Up',
+    pill: 'Interactive · Personalized · AI-Powered',
+    heroLine1: 'Turn',
+    heroLine2: 'Learning Into',
+    heroLine3: 'an Adventure.',
+    subtitle: 'Personalized learning, gamified experience, and AI-powered guidance — all in one platform.',
+    startJourney: 'Start Your Journey',
+    exploreDemo: 'Explore Demo',
+    students: 'Students',
+    resources: 'Resources',
+    performance: 'Performance',
+    novaCompanion: 'Nova AI Companion',
+    mathWorld: 'Mathematics',
+    scienceWorld: 'Science',
+    csWorld: 'Computer Science',
+    futureSignpost1: 'Your Future',
+    futureSignpost2: 'Starts Here',
+    card1Title: 'Gamified Learning',
+    card1Desc: 'Turn study into an exciting journey',
+    card2Title: 'Personalized Paths',
+    card2Desc: 'Learn at your own pace',
+    card3Title: 'AI Study Mentor',
+    card3Desc: 'Your always-available guide',
+    card4Title: 'Brighter Future',
+    card4Desc: 'Build skills for tomorrow',
+  };
 
   return (
     <div className="min-h-screen bg-[#060913] text-white selection:bg-indigo-500 selection:text-white flex flex-col justify-between relative overflow-x-hidden font-sans">
@@ -80,7 +169,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               Smart Edu
             </span>
             <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wider">
-              Learn · Play · Grow
+              {t.tagline}
             </span>
           </div>
         </Link>
@@ -92,49 +181,49 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             prefetch={false}
             className="text-cyan-400 font-semibold relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-cyan-400 after:rounded-full after:shadow-[0_0_8px_rgba(6,182,212,0.8)]"
           >
-            Home
+            {t.home}
           </Link>
           <Link
             href="/student/map"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            Features
+            {t.features}
           </Link>
           <Link
             href="/student"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            For Students
+            {t.forStudents}
           </Link>
           <Link
             href="/teacher"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            For Teachers
+            {t.forTeachers}
           </Link>
           <Link
             href="/parent"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            For Parents
+            {t.forParents}
           </Link>
           <Link
             href="/admin"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            For Institutions
+            {t.forInstitutions}
           </Link>
           <Link
             href="/student/career"
             prefetch={false}
             className="text-slate-300 hover:text-white transition-colors cursor-pointer py-1"
           >
-            About
+            {t.about}
           </Link>
         </nav>
 
@@ -160,10 +249,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                   <button
                     key={lang.code}
                     type="button"
-                    onClick={() => {
-                      setCurrentLang(lang.code);
-                      setLangMenuOpen(false);
-                    }}
+                    onClick={() => handleSelectLang(lang.code)}
                     className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium flex items-center justify-between transition ${
                       currentLang === lang.code
                         ? 'bg-cyan-500/20 text-cyan-300 font-bold'
@@ -184,7 +270,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             prefetch={false}
             className="px-4 sm:px-5 py-2 rounded-full bg-slate-900/60 hover:bg-slate-800/80 border border-white/15 hover:border-white/30 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer active:scale-95"
           >
-            Log In
+            {t.logIn}
           </Link>
 
           {/* Sign Up Button */}
@@ -193,7 +279,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             prefetch={false}
             className="px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition active:scale-95 cursor-pointer"
           >
-            Sign Up
+            {t.signUp}
           </Link>
         </div>
 
@@ -212,22 +298,21 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
               {/* Feature Pill Badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/70 border border-cyan-500/40 text-cyan-300 text-xs font-bold tracking-wide shadow-[0_0_15px_rgba(6,182,212,0.15)]">
                 <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                <span>Interactive · Personalized · AI-Powered</span>
+                <span>{t.pill}</span>
               </div>
 
               {/* Razor-Sharp Main Heading */}
               <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-black text-white tracking-tight leading-[1.08] drop-shadow-md">
-                Turn <br />
-                Learning Into <br />
-                an{' '}
+                {t.heroLine1} <br />
+                {t.heroLine2} <br />
                 <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-purple-400 bg-clip-text text-transparent">
-                  Adventure.
+                  {t.heroLine3}
                 </span>
               </h1>
 
               {/* Crisp Subtitle */}
               <p className="text-sm sm:text-base lg:text-lg text-slate-300 leading-relaxed font-normal max-w-xl">
-                Personalized learning, gamified experience, and AI-powered guidance — all in one platform.
+                {t.subtitle}
               </p>
 
               {/* Action Buttons */}
@@ -237,7 +322,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                   prefetch={false}
                   className="px-7 sm:px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-black text-sm shadow-xl shadow-indigo-600/40 hover:shadow-indigo-600/60 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer group"
                 >
-                  <span>Start Your Journey</span>
+                  <span>{t.startJourney}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
 
@@ -246,45 +331,47 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                   prefetch={false}
                   className="px-6 sm:px-7 py-3.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-white/20 text-slate-200 hover:text-white font-bold text-sm backdrop-blur-md hover:border-white/40 transition-all cursor-pointer"
                 >
-                  <span>Explore Demo</span>
+                  <span>{t.exploreDemo}</span>
                 </Link>
               </div>
 
               {/* 4 Verified Metric Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-4 max-w-xl">
                 
-                {/* 10K+ Students */}
+                {/* Students Metric */}
                 <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-cyan-500/40 transition">
                   <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 shrink-0">
                     <Users className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="text-sm sm:text-base font-black text-white leading-tight">
-                      {stats?.studentsCount ? `${stats.studentsCount}+` : '10K+'}
+                      {stats?.studentsCount ? `${stats.studentsCount}+` : '10+'}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-semibold">Students</div>
+                    <div className="text-[10px] text-slate-400 font-semibold">{t.students}</div>
                   </div>
                 </div>
 
-                {/* 500+ Learning Resources */}
+                {/* Learning Resources */}
                 <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-indigo-500/40 transition">
                   <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-sm sm:text-base font-black text-white leading-tight">500+</div>
-                    <div className="text-[10px] text-slate-400 font-semibold truncate">Resources</div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">
+                      {stats?.questionsCount ? `${stats.questionsCount}+` : '50+'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">{t.resources}</div>
                   </div>
                 </div>
 
-                {/* 95% Improved Performance */}
+                {/* Performance */}
                 <div className="p-3 rounded-2xl bg-slate-900/85 border border-white/10 backdrop-blur-md flex items-center gap-2.5 hover:border-purple-500/40 transition">
                   <div className="p-2 rounded-xl bg-purple-500/20 text-purple-400 shrink-0">
                     <Rocket className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="text-sm sm:text-base font-black text-white leading-tight">95%</div>
-                    <div className="text-[10px] text-slate-400 font-semibold truncate">Performance</div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">{t.performance}</div>
                   </div>
                 </div>
 
@@ -295,7 +382,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                   </div>
                   <div>
                     <div className="text-sm sm:text-base font-black text-white leading-tight">Nova AI</div>
-                    <div className="text-[10px] text-slate-400 font-semibold truncate">Companion</div>
+                    <div className="text-[10px] text-slate-400 font-semibold truncate">{t.novaCompanion}</div>
                   </div>
                 </div>
 
@@ -314,7 +401,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                 title="Mathematics World"
               >
                 <span className="font-mono text-cyan-400 font-black">π</span>
-                <span>Mathematics</span>
+                <span>{t.mathWorld}</span>
               </Link>
 
               {/* Science Island Portal */}
@@ -325,7 +412,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                 title="Science World"
               >
                 <Atom className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Science</span>
+                <span>{t.scienceWorld}</span>
               </Link>
 
               {/* Computer Science Island Portal */}
@@ -336,7 +423,7 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                 title="Computer Science World"
               >
                 <Code className="w-3.5 h-3.5 text-purple-400" />
-                <span>Computer Science</span>
+                <span>{t.csWorld}</span>
               </Link>
 
               {/* Wooden Signpost: Your Future Starts Here */}
@@ -346,9 +433,9 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                 className="absolute bottom-[10%] right-[4%] px-4 py-3 rounded-2xl bg-amber-950/70 border border-amber-500/40 text-amber-200 text-xs font-extrabold shadow-2xl shadow-amber-950/50 backdrop-blur-md hover:scale-105 hover:border-amber-400 transition cursor-pointer flex flex-col items-center justify-center text-center group"
                 title="Your Future Starts Here - Career Galaxy"
               >
-                <span className="text-[11px] leading-tight">Your Future</span>
+                <span className="text-[11px] leading-tight">{t.futureSignpost1}</span>
                 <span className="text-xs font-black text-amber-100 flex items-center gap-1 mt-0.5">
-                  Starts Here
+                  {t.futureSignpost2}
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </Link>
@@ -376,10 +463,10 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
-                Gamified Learning
+                {t.card1Title}
               </h4>
               <p className="text-xs text-slate-400 truncate">
-                Turn study into an exciting journey
+                {t.card1Desc}
               </p>
             </div>
           </Link>
@@ -395,10 +482,10 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
-                Personalized Paths
+                {t.card2Title}
               </h4>
               <p className="text-xs text-slate-400 truncate">
-                Learn at your own pace
+                {t.card2Desc}
               </p>
             </div>
           </Link>
@@ -414,10 +501,10 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                AI Study Mentor
+                {t.card3Title}
               </h4>
               <p className="text-xs text-slate-400 truncate">
-                Your always-available guide
+                {t.card3Desc}
               </p>
             </div>
           </Link>
@@ -433,10 +520,10 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-bold text-white group-hover:text-blue-300 transition-colors">
-                Brighter Future
+                {t.card4Title}
               </h4>
               <p className="text-xs text-slate-400 truncate">
-                Build skills for tomorrow
+                {t.card4Desc}
               </p>
             </div>
           </Link>
