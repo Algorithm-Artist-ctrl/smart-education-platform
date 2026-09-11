@@ -146,15 +146,47 @@ export interface Subject {
   created_at: string;
 }
 
+export interface Module {
+  id: string;
+  subject_id: string;
+  title: string;
+  description?: string | null;
+  order_index: number;
+  icon?: string | null;
+  created_at: string;
+  updated_at: string;
+  subject?: Subject;
+  chapters?: Chapter[];
+}
+
+export interface Chapter {
+  id: string;
+  module_id: string;
+  title: string;
+  description?: string | null;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+  module?: Module;
+  topics?: Topic[];
+}
+
 export interface Topic {
   id: string;
   subject_id: string;
+  module_id?: string | null;
+  chapter_id?: string | null;
   name: string;
   description?: string | null;
   difficulty_level: number; // 1, 2, 3
   order_index: number;
+  learning_objectives?: string[];
+  prerequisites?: string[];
+  estimated_minutes?: number;
   created_at: string;
   subject?: Subject;
+  module?: Module;
+  chapter?: Chapter;
 }
 
 export interface LearningContent {
@@ -523,5 +555,108 @@ export interface ParentStudentRelationship {
   parent?: Profile;
   student?: Profile;
 }
+
+export type TopicLearningStatus = 'not_started' | 'in_progress' | 'needs_practice' | 'mastered';
+
+export interface StudentLearningPosition {
+  id: string;
+  student_id: string;
+  subject_id: string;
+  module_id?: string | null;
+  chapter_id?: string | null;
+  topic_id?: string | null;
+  lesson_id?: string | null;
+  lesson_title?: string | null;
+  step_number: number;
+  total_steps: number;
+  status: 'not_started' | 'in_progress' | 'completed';
+  last_accessed_at: string;
+  created_at: string;
+  updated_at: string;
+  subject?: Subject;
+  module?: Module;
+  chapter?: Chapter;
+  topic?: Topic;
+}
+
+export interface PracticeAttempt {
+  id: string;
+  student_id: string;
+  topic_id: string;
+  question_id: string;
+  selected_option_index: number;
+  is_correct: boolean;
+  hints_used: number;
+  time_spent_seconds: number;
+  mistake_category?: string | null;
+  created_at: string;
+  question?: Question;
+  topic?: Topic;
+}
+
+export interface ChapterWithMastery extends Chapter {
+  topics: Array<Topic & { mastery?: TopicMastery | null; status: TopicLearningStatus }>;
+  completedTopicsCount: number;
+  totalTopicsCount: number;
+  completionPercentage: number;
+  averageMasteryScore: number;
+  status: TopicLearningStatus;
+}
+
+export interface ModuleWithMastery extends Module {
+  chapters: ChapterWithMastery[];
+  completedChaptersCount: number;
+  totalChaptersCount: number;
+  completionPercentage: number;
+  averageMasteryScore: number;
+  status: TopicLearningStatus;
+}
+
+export interface SubjectCurriculumHierarchy {
+  subject: Subject;
+  modules: ModuleWithMastery[];
+  overallProgress: number;
+  overallMastery: number;
+  totalTopicsCount: number;
+  completedTopicsCount: number;
+  masteredTopicsCount: number;
+}
+
+export interface WeakAreaDetailed {
+  topic_id: string;
+  topic_name: string;
+  subject_name: string;
+  module_title?: string;
+  chapter_title?: string;
+  accuracy: number;
+  attempts: number;
+  incorrect_attempts: number;
+  mastery_score: number;
+  primary_mistake_reason: string;
+  remediation_steps: string[];
+}
+
+export interface StrengthDetailed {
+  topic_id: string;
+  topic_name: string;
+  subject_name: string;
+  mastery_score: number;
+  accuracy: number;
+  attempts: number;
+  highlight_skills: string[];
+}
+
+export interface PersonalizedPathStep {
+  step_order: number;
+  topic_id: string;
+  topic_name: string;
+  subject_name: string;
+  action_type: 'mastered' | 'revise' | 'practice' | 'next_concept' | 'challenge';
+  status_badge: string;
+  badge_color: string;
+  target_url: string;
+  rationale: string;
+}
+
 
 

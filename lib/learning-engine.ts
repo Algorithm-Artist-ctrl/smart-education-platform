@@ -3,7 +3,23 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { calculateLevel } from '@/lib/gamification-engine';
-import { TopicMastery, TopicMasteryStatus } from '@/types/database.types';
+import { 
+  TopicMastery, 
+  TopicMasteryStatus,
+  Subject,
+  Module,
+  Chapter,
+  Topic,
+  StudentLearningPosition,
+  PracticeAttempt,
+  TopicLearningStatus,
+  ChapterWithMastery,
+  ModuleWithMastery,
+  SubjectCurriculumHierarchy,
+  WeakAreaDetailed,
+  StrengthDetailed,
+  PersonalizedPathStep,
+} from '@/types/database.types';
 
 export interface AssessmentSubmissionData {
   assessment_id: string;
@@ -1306,3 +1322,829 @@ export async function processAssessmentEvaluation(
     masteredTopicIds,
   };
 }
+
+/**
+ * Get Complete Structured Curriculum Hierarchy
+ * Returns Subject -> Module -> Chapter -> Topic tree with real student mastery & progress
+ */
+export async function getCurriculumHierarchy(
+  supabase: SupabaseClient,
+  studentId?: string,
+  subjectId?: string
+): Promise<SubjectCurriculumHierarchy[]> {
+  // 1. Fetch Subjects
+  let subjectQuery = supabase
+    .from('subjects')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (subjectId) {
+    subjectQuery = subjectQuery.eq('id', subjectId);
+  }
+
+  const { data: subjects, error: subErr } = await subjectQuery;
+  if (subErr || !subjects || subjects.length === 0) {
+    return [];
+  }
+
+  const subjectIds = subjects.map((s) => s.id);
+
+  // 2. Fetch Modules
+  const { data: modulesData } = await supabase
+    .from('modules')
+    .select('*')
+    .in('subject_id', subjectIds)
+    .order('order_index', { ascending: true });
+
+  const modules = modulesData || [];
+  const moduleIds = modules.map((m) => m.id);
+
+  // 3. Fetch Chapters
+  let chapters: Chapter[] = [];
+  if (moduleIds.length > 0) {
+    const { data: chaptersData } = await supabase
+      .from('chapters')
+      .select('*')
+      .in('module_id', moduleIds)
+      .order('order_index', { ascending: true });
+    chapters = chaptersData || [];
+  }
+
+  // 4. Fetch Topics
+  const { data: topicsData } = await supabase
+    .from('topics')
+    .select('*')
+    .in('subject_id', subjectIds)
+    .order('order_index', { ascending: true });
+
+  const topics: Topic[] = topicsData || [];
+
+  // 5. If studentId provided, fetch student mastery & learning positions
+  let topicMasteryMap: Record<string, TopicMastery> = {};
+  let learningPositionsMap: Record<string, StudentLearningPosition> = {};
+
+  if (studentId) {
+    const { data: masteryRows } = await supabase
+      .from('topic_mastery')
+      .select('*')
+      .eq('student_id', studentId);
+
+    if (masteryRows) {
+      masteryRows.forEach((row) => {
+        topicMasteryMap[row.topic_id] = row;
+      });
+    }
+
+    const { data: positions } = await supabase
+      .from('student_learning_positions')
+      .select('*')
+      .eq('student_id', studentId);
+
+    if (positions) {
+      positions.forEach((pos) => {
+        if (pos.topic_id) {
+          learningPositionsMap[pos.topic_id] = pos;
+        }
+      });
+    }
+  }
+
+  // Helper to determine status of a topic
+  const evaluateTopicStatus = (topic: Topic): TopicLearningStatus => {
+    const mastery = topicMasteryMap[topic.id];
+    if (mastery) {
+      if (mastery.status === 'mastered' || mastery.mastery_score >= 80) return 'mastered';
+      if (mastery.status === 'needs_support' || mastery.mastery_score < 60) return 'needs_practice';
+      return 'in_progress';
+    }
+    if (learningPositionsMap[topic.id]) {
+      return learningPositionsMap[topic.id].status === 'completed' ? 'mastered' : 'in_progress';
+    }
+    return 'not_started';
+  };
+
+  // Group chapters by module_id
+  const chaptersByModule: Record<string, Chapter[]> = {};
+  chapters.forEach((ch) => {
+    if (!chaptersByModule[ch.module_id]) chaptersByModule[ch.module_id] = [];
+    chaptersByModule[ch.module_id].push(ch);
+  });
+
+  // Group topics by chapter_id
+  const topicsByChapter: Record<string, Topic[]> = {};
+  const unassignedTopicsBySubject: Record<string, Topic[]> = {};
+
+  topics.forEach((top) => {
+    if (top.chapter_id) {
+      if (!topicsByChapter[top.chapter_id]) topicsByChapter[top.chapter_id] = [];
+      topicsByChapter[top.chapter_id].push(top);
+    } else {
+      if (!unassignedTopicsBySubject[top.subject_id]) unassignedTopicsBySubject[top.subject_id] = [];
+      unassignedTopicsBySubject[top.subject_id].push(top);
+    }
+  });
+
+  // 6. Build the hierarchy
+  const hierarchy: SubjectCurriculumHierarchy[] = subjects.map((subj) => {
+    const subjectModules = modules.filter((m) => m.subject_id === subj.id);
+
+    // If subject has unassigned topics, synthesize a default module/chapter so they are visible
+    const unassigned = unassignedTopicsBySubject[subj.id] || [];
+    let effectiveModules = [...subjectModules];
+
+    if (unassigned.length > 0 && effectiveModules.length === 0) {
+      // Create virtual introductory module and chapter
+      effectiveModules.push({
+        id: `synth-mod-${subj.id}`,
+        subject_id: subj.id,
+        title: `${subj.name} Core Curriculum`,
+        description: `Essential topics and foundations for ${subj.name}`,
+        order_index: 1,
+        icon: subj.icon || 'BookOpen',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    let totalSubjTopics = 0;
+    let completedSubjTopics = 0;
+    let masteredSubjTopics = 0;
+    let totalSubjMasterySum = 0;
+
+    const modulesWithMastery: ModuleWithMastery[] = effectiveModules.map((mod) => {
+      let modChapters = chaptersByModule[mod.id] || [];
+
+      // If virtual module, attach unassigned topics to a virtual chapter
+      if (mod.id === `synth-mod-${subj.id}`) {
+        modChapters = [
+          {
+            id: `synth-ch-${subj.id}`,
+            module_id: mod.id,
+            title: 'Core Foundations',
+            description: 'Fundamental units and key competencies',
+            order_index: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ];
+        topicsByChapter[`synth-ch-${subj.id}`] = unassigned;
+      }
+
+      let completedChaptersCount = 0;
+      let moduleMasterySum = 0;
+      let moduleTopicsCount = 0;
+
+      const chaptersWithMastery: ChapterWithMastery[] = modChapters.map((ch) => {
+        const chTopics = topicsByChapter[ch.id] || [];
+        let completedTopicsCount = 0;
+        let chapterMasterySum = 0;
+
+        const evaluatedTopics = chTopics.map((top) => {
+          const status = evaluateTopicStatus(top);
+          const mastery = topicMasteryMap[top.id] || null;
+          const score = mastery?.mastery_score || 0;
+
+          if (status === 'mastered') {
+            completedTopicsCount++;
+            masteredSubjTopics++;
+          } else if (status === 'in_progress') {
+            completedTopicsCount += 0.5;
+          }
+
+          chapterMasterySum += score;
+          return {
+            ...top,
+            mastery,
+            status,
+          };
+        });
+
+        const chTotalTopics = chTopics.length;
+        const chCompletionPercent = chTotalTopics > 0 ? Math.round((completedTopicsCount / chTotalTopics) * 100) : 0;
+        const chAvgMastery = chTotalTopics > 0 ? Math.round(chapterMasterySum / chTotalTopics) : 0;
+
+        let chStatus: TopicLearningStatus = 'not_started';
+        if (evaluatedTopics.some((t) => t.status === 'needs_practice')) {
+          chStatus = 'needs_practice';
+        } else if (evaluatedTopics.length > 0 && evaluatedTopics.every((t) => t.status === 'mastered')) {
+          chStatus = 'mastered';
+        } else if (evaluatedTopics.some((t) => t.status === 'in_progress' || t.status === 'mastered')) {
+          chStatus = 'in_progress';
+        }
+
+        if (chCompletionPercent >= 100) {
+          completedChaptersCount++;
+        }
+
+        moduleMasterySum += chAvgMastery;
+        moduleTopicsCount += chTotalTopics;
+        totalSubjTopics += chTotalTopics;
+        completedSubjTopics += completedTopicsCount;
+        totalSubjMasterySum += chapterMasterySum;
+
+        return {
+          ...ch,
+          topics: evaluatedTopics,
+          completedTopicsCount: Math.round(completedTopicsCount),
+          totalTopicsCount: chTotalTopics,
+          completionPercentage: chCompletionPercent,
+          averageMasteryScore: chAvgMastery,
+          status: chStatus,
+        };
+      });
+
+      const totalChapters = modChapters.length;
+      const modCompletionPercent = totalChapters > 0 ? Math.round((completedChaptersCount / totalChapters) * 100) : 0;
+      const modAvgMastery = totalChapters > 0 ? Math.round(moduleMasterySum / totalChapters) : 0;
+
+      let modStatus: TopicLearningStatus = 'not_started';
+      if (chaptersWithMastery.some((c) => c.status === 'needs_practice')) {
+        modStatus = 'needs_practice';
+      } else if (chaptersWithMastery.length > 0 && chaptersWithMastery.every((c) => c.status === 'mastered')) {
+        modStatus = 'mastered';
+      } else if (chaptersWithMastery.some((c) => c.status === 'in_progress' || c.status === 'mastered')) {
+        modStatus = 'in_progress';
+      }
+
+      return {
+        ...mod,
+        chapters: chaptersWithMastery,
+        completedChaptersCount,
+        totalChaptersCount: totalChapters,
+        completionPercentage: modCompletionPercent,
+        averageMasteryScore: modAvgMastery,
+        status: modStatus,
+      };
+    });
+
+    const overallProgress = totalSubjTopics > 0 ? Math.min(100, Math.round((completedSubjTopics / totalSubjTopics) * 100)) : 0;
+    const overallMastery = totalSubjTopics > 0 ? Math.min(100, Math.round(totalSubjMasterySum / totalSubjTopics)) : 0;
+
+    return {
+      subject: subj,
+      modules: modulesWithMastery,
+      overallProgress,
+      overallMastery,
+      totalTopicsCount: totalSubjTopics,
+      completedTopicsCount: Math.round(completedSubjTopics),
+      masteredTopicsCount: masteredSubjTopics,
+    };
+  });
+
+  return hierarchy;
+}
+
+/**
+ * Get Student's Last Saved Learning Position
+ * Supports resuming from exact module, chapter, and topic
+ */
+export async function getStudentLearningPosition(
+  supabase: SupabaseClient,
+  studentId: string,
+  subjectId?: string
+): Promise<StudentLearningPosition | null> {
+  let query = supabase
+    .from('student_learning_positions')
+    .select(`
+      *,
+      subject:subjects(*),
+      module:modules(*),
+      chapter:chapters(*),
+      topic:topics(*)
+    `)
+    .eq('student_id', studentId)
+    .order('last_accessed_at', { ascending: false });
+
+  if (subjectId) {
+    query = query.eq('subject_id', subjectId);
+  }
+
+  const { data: positions, error } = await query.limit(1);
+
+  if (!error && positions && positions.length > 0) {
+    return positions[0] as StudentLearningPosition;
+  }
+
+  // If no position saved yet, find the first available subject and topic to give a default starting point
+  let defaultSubjectQuery = supabase.from('subjects').select('*').order('name', { ascending: true });
+  if (subjectId) {
+    defaultSubjectQuery = defaultSubjectQuery.eq('id', subjectId);
+  }
+  const { data: subjects } = await defaultSubjectQuery.limit(1);
+
+  if (!subjects || subjects.length === 0) return null;
+  const firstSubject = subjects[0];
+
+  const { data: firstTopic } = await supabase
+    .from('topics')
+    .select('*')
+    .eq('subject_id', firstSubject.id)
+    .order('order_index', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    id: 'default-pos',
+    student_id: studentId,
+    subject_id: firstSubject.id,
+    module_id: firstTopic?.module_id || null,
+    chapter_id: firstTopic?.chapter_id || null,
+    topic_id: firstTopic?.id || null,
+    lesson_id: null,
+    lesson_title: firstTopic?.name || 'Getting Started',
+    step_number: 1,
+    total_steps: 4,
+    status: 'not_started',
+    last_accessed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    subject: firstSubject,
+    topic: firstTopic || undefined,
+  };
+}
+
+/**
+ * Save or Update Student Learning Position
+ */
+export async function saveStudentLearningPosition(
+  supabase: SupabaseClient,
+  studentId: string,
+  positionData: {
+    subject_id: string;
+    module_id?: string | null;
+    chapter_id?: string | null;
+    topic_id?: string | null;
+    lesson_id?: string | null;
+    lesson_title?: string | null;
+    step_number?: number;
+    total_steps?: number;
+    status?: 'not_started' | 'in_progress' | 'completed';
+  }
+): Promise<StudentLearningPosition> {
+  const now = new Date().toISOString();
+
+  const payload = {
+    student_id: studentId,
+    subject_id: positionData.subject_id,
+    module_id: positionData.module_id || null,
+    chapter_id: positionData.chapter_id || null,
+    topic_id: positionData.topic_id || null,
+    lesson_id: positionData.lesson_id || null,
+    lesson_title: positionData.lesson_title || null,
+    step_number: positionData.step_number || 1,
+    total_steps: positionData.total_steps || 4,
+    status: positionData.status || 'in_progress',
+    last_accessed_at: now,
+    updated_at: now,
+  };
+
+  const { data, error } = await supabase
+    .from('student_learning_positions')
+    .upsert(payload, { onConflict: 'student_id,subject_id' })
+    .select(`
+      *,
+      subject:subjects(*),
+      module:modules(*),
+      chapter:chapters(*),
+      topic:topics(*)
+    `)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to save learning position: ${error.message}`);
+  }
+
+  return data as StudentLearningPosition;
+}
+
+/**
+ * Get Diagnostic Weak Areas with Positive Remediation Action Plans
+ * Zero shaming: focuses on mastery opportunities and targeted practice steps
+ */
+export async function getStudentWeakAreasDetailed(
+  supabase: SupabaseClient,
+  studentId: string
+): Promise<WeakAreaDetailed[]> {
+  // Query topics where mastery is struggling or score < 65%
+  const { data: masteries } = await supabase
+    .from('topic_mastery')
+    .select(`
+      topic_id,
+      mastery_score,
+      accuracy_rate,
+      total_attempts,
+      status,
+      topic:topics(
+        id,
+        name,
+        subject:subjects(name),
+        module:modules(title),
+        chapter:chapters(title)
+      )
+    `)
+    .eq('student_id', studentId)
+    .or('status.eq.needs_support,mastery_score.lt.65')
+    .order('mastery_score', { ascending: true })
+    .limit(5);
+
+  if (!masteries || masteries.length === 0) {
+    return [];
+  }
+
+  // Query mistake records for context if available
+  const topicIds = masteries.map((m) => m.topic_id);
+  const { data: attempts } = await supabase
+    .from('practice_attempts')
+    .select('topic_id, mistake_category, is_correct')
+    .eq('student_id', studentId)
+    .eq('is_correct', false)
+    .in('topic_id', topicIds)
+    .order('created_at', { ascending: false });
+
+  const mistakeCategoryByTopic: Record<string, string> = {};
+  if (attempts) {
+    attempts.forEach((att) => {
+      if (att.mistake_category && !mistakeCategoryByTopic[att.topic_id]) {
+        mistakeCategoryByTopic[att.topic_id] = att.mistake_category;
+      }
+    });
+  }
+
+  return masteries.map((row) => {
+    const topic = row.topic as any;
+    const topicName = topic?.name || 'Key Concept';
+    const subjectName = topic?.subject?.name || 'General';
+    const moduleTitle = topic?.module?.title;
+    const chapterTitle = topic?.chapter?.title;
+
+    const attemptsCount = row.total_attempts || 0;
+    const accuracy = row.accuracy_rate ? Math.round(row.accuracy_rate * 100) : 0;
+    const incorrectCount = Math.round(attemptsCount * (1 - (row.accuracy_rate || 0)));
+    const primaryMistake = mistakeCategoryByTopic[row.topic_id] || 'Formula application and sign management';
+
+    return {
+      topic_id: row.topic_id,
+      topic_name: topicName,
+      subject_name: subjectName,
+      module_title: moduleTitle,
+      chapter_title: chapterTitle,
+      accuracy,
+      attempts: attemptsCount,
+      incorrect_attempts: incorrectCount,
+      mastery_score: Math.round(row.mastery_score),
+      primary_mistake_reason: primaryMistake,
+      remediation_steps: [
+        `1. Interactive Review: Explore the visual model and step-by-step breakdown for ${topicName}.`,
+        `2. Nova Dialogue: Ask Nova for a clear intuition check on ${primaryMistake.toLowerCase()}.`,
+        `3. Guided Practice: Solve 3 un-timed practice problems with instant step feedback.`,
+        `4. Mistake Analysis: Inspect the correct reasoning behind previous attempts without time pressure.`,
+        `5. Verification Quiz: Score 80%+ on a 5-question mastery checkpoint to advance to Mastered status.`,
+      ],
+    };
+  });
+}
+
+/**
+ * Get Student Strengths with Superpower Highlights
+ */
+export async function getStudentStrengthsDetailed(
+  supabase: SupabaseClient,
+  studentId: string
+): Promise<StrengthDetailed[]> {
+  const { data: masteries } = await supabase
+    .from('topic_mastery')
+    .select(`
+      topic_id,
+      mastery_score,
+      accuracy_rate,
+      total_attempts,
+      status,
+      topic:topics(
+        id,
+        name,
+        subject:subjects(name)
+      )
+    `)
+    .eq('student_id', studentId)
+    .or('status.eq.mastered,mastery_score.gte.80')
+    .order('mastery_score', { ascending: false })
+    .limit(5);
+
+  if (!masteries || masteries.length === 0) {
+    return [];
+  }
+
+  return masteries.map((row) => {
+    const topic = row.topic as any;
+    const topicName = topic?.name || 'Mastered Topic';
+    const subjectName = topic?.subject?.name || 'General';
+    const accuracy = row.accuracy_rate ? Math.round(row.accuracy_rate * 100) : 95;
+
+    return {
+      topic_id: row.topic_id,
+      topic_name: topicName,
+      subject_name: subjectName,
+      mastery_score: Math.round(row.mastery_score),
+      accuracy,
+      attempts: row.total_attempts || 0,
+      highlight_skills: [
+        'High analytical precision with consistently accurate solutions',
+        'Strong conceptual foundation and fast problem-solving flow',
+        'Ready for advanced multi-step challenge problems',
+      ],
+    };
+  });
+}
+
+/**
+ * Generate Dynamic Personalized Learning Path Steps
+ * Mastered (95%) -> Needs Practice -> Almost Mastered -> Next Concept -> Challenge
+ */
+export async function getPersonalizedLearningPath(
+  supabase: SupabaseClient,
+  studentId: string,
+  subjectId?: string
+): Promise<PersonalizedPathStep[]> {
+  // Fetch curriculum hierarchy to discover logical progression
+  const hierarchy = await getCurriculumHierarchy(supabase, studentId, subjectId);
+  if (hierarchy.length === 0) {
+    return [];
+  }
+
+  const steps: PersonalizedPathStep[] = [];
+  let stepCounter = 1;
+
+  // 1. Gather all topics across hierarchy with student status
+  const allTopics: Array<{
+    topic: Topic;
+    subjectName: string;
+    status: TopicLearningStatus;
+    masteryScore: number;
+    subjectId: string;
+    moduleId?: string | null;
+    chapterId?: string | null;
+  }> = [];
+
+  hierarchy.forEach((h) => {
+    h.modules.forEach((mod) => {
+      mod.chapters.forEach((ch) => {
+        ch.topics.forEach((t) => {
+          allTopics.push({
+            topic: t,
+            subjectName: h.subject.name,
+            status: t.status,
+            masteryScore: t.mastery?.mastery_score || 0,
+            subjectId: h.subject.id,
+            moduleId: mod.id,
+            chapterId: ch.id,
+          });
+        });
+      });
+    });
+  });
+
+  if (allTopics.length === 0) {
+    return [];
+  }
+
+  // Find mastered topic (if any)
+  const mastered = allTopics.find((t) => t.status === 'mastered' || t.masteryScore >= 80);
+  if (mastered) {
+    steps.push({
+      step_order: stepCounter++,
+      topic_id: mastered.topic.id,
+      topic_name: mastered.topic.name,
+      subject_name: mastered.subjectName,
+      action_type: 'mastered',
+      status_badge: `Mastered (${Math.round(mastered.masteryScore)}%)`,
+      badge_color: 'emerald',
+      target_url: `/student/learning/${mastered.subjectId}/${mastered.moduleId || 'core'}/${mastered.chapterId || 'foundation'}/${mastered.topic.id}`,
+      rationale: 'Core foundation secured. Strong conceptual anchor for upcoming units.',
+    });
+  }
+
+  // Find weak topic (needs practice)
+  const weak = allTopics.find((t) => t.status === 'needs_practice' || (t.masteryScore > 0 && t.masteryScore < 65));
+  if (weak) {
+    steps.push({
+      step_order: stepCounter++,
+      topic_id: weak.topic.id,
+      topic_name: weak.topic.name,
+      subject_name: weak.subjectName,
+      action_type: 'revise',
+      status_badge: 'Needs Practice',
+      badge_color: 'rose',
+      target_url: `/student/learning/${weak.subjectId}/${weak.moduleId || 'core'}/${weak.chapterId || 'foundation'}/${weak.topic.id}?tab=practice`,
+      rationale: 'Targeted revision recommended. Review key formula steps and tackle 3 guided exercises.',
+    });
+  }
+
+  // Find in-progress topic (almost mastered)
+  const inProgress = allTopics.find((t) => t.status === 'in_progress' && t.topic.id !== weak?.topic.id);
+  if (inProgress) {
+    steps.push({
+      step_order: stepCounter++,
+      topic_id: inProgress.topic.id,
+      topic_name: inProgress.topic.name,
+      subject_name: inProgress.subjectName,
+      action_type: 'practice',
+      status_badge: inProgress.masteryScore > 60 ? `Almost Mastered (${Math.round(inProgress.masteryScore)}%)` : 'In Progress',
+      badge_color: 'amber',
+      target_url: `/student/learning/${inProgress.subjectId}/${inProgress.moduleId || 'core'}/${inProgress.chapterId || 'foundation'}/${inProgress.topic.id}?tab=practice`,
+      rationale: 'Solid progress! Solve a few more practice scenarios to push mastery past 85%.',
+    });
+  }
+
+  // Find next not-started topic
+  const nextUp = allTopics.find((t) => t.status === 'not_started');
+  if (nextUp) {
+    steps.push({
+      step_order: stepCounter++,
+      topic_id: nextUp.topic.id,
+      topic_name: nextUp.topic.name,
+      subject_name: nextUp.subjectName,
+      action_type: 'next_concept',
+      status_badge: 'Next Concept',
+      badge_color: 'sky',
+      target_url: `/student/learning/${nextUp.subjectId}/${nextUp.moduleId || 'core'}/${nextUp.chapterId || 'foundation'}/${nextUp.topic.id}`,
+      rationale: 'Logical next building block in your curriculum. Ready for interactive concept discovery.',
+    });
+  }
+
+  // Final challenge / capstone step
+  const challengeTarget = nextUp || inProgress || allTopics[allTopics.length - 1];
+  steps.push({
+    step_order: stepCounter++,
+    topic_id: challengeTarget.topic.id,
+    topic_name: `${challengeTarget.topic.name} Mastery Challenge`,
+    subject_name: challengeTarget.subjectName,
+    action_type: 'challenge',
+    status_badge: 'Mastery Challenge',
+    badge_color: 'purple',
+    target_url: `/student/learning/${challengeTarget.subjectId}/${challengeTarget.moduleId || 'core'}/${challengeTarget.chapterId || 'foundation'}/${challengeTarget.topic.id}?tab=quiz`,
+    rationale: 'Put your skills to the test with a multi-step challenge assessment to earn bonus XP.',
+  });
+
+  return steps;
+}
+
+/**
+ * Record Practice Question Attempt with Positive Learning Feedback and Dynamic Mastery Update
+ */
+export async function recordPracticeAttempt(
+  supabase: SupabaseClient,
+  studentId: string,
+  attemptData: {
+    topic_id: string;
+    question_id: string;
+    selected_option_index: number;
+    hints_used?: number;
+    time_spent_seconds?: number;
+  }
+): Promise<{
+  isCorrect: boolean;
+  correctOptionIndex: number;
+  explanation: string;
+  mistakeCategory: string | null;
+  xpEarned: number;
+  updatedMastery: { mastery_score: number; status: TopicMasteryStatus };
+}> {
+  const { topic_id, question_id, selected_option_index, hints_used = 0, time_spent_seconds = 15 } = attemptData;
+
+  // 1. Fetch Question details
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('*')
+    .eq('id', question_id)
+    .single();
+
+  if (qErr || !question) {
+    throw new Error(`Question ${question_id} not found.`);
+  }
+
+  const isCorrect = selected_option_index === question.correct_option_index;
+
+  // 2. Classify mistake positively if incorrect
+  let mistakeCategory: string | null = null;
+  if (!isCorrect) {
+    if (time_spent_seconds < 8) {
+      mistakeCategory = 'Rapid Reading Pace';
+    } else if (hints_used > 0) {
+      mistakeCategory = 'Formula Application Nuance';
+    } else {
+      mistakeCategory = 'Conceptual Step Synthesis';
+    }
+  }
+
+  // 3. Insert Practice Attempt record
+  await supabase.from('practice_attempts').insert({
+    student_id: studentId,
+    topic_id,
+    question_id,
+    selected_option_index,
+    is_correct: isCorrect,
+    hints_used,
+    time_spent_seconds,
+    mistake_category: mistakeCategory,
+  });
+
+  // 4. Calculate XP: +15 XP for correct, +5 XP for growth effort
+  const xpEarned = isCorrect ? 15 : 5;
+
+  // Award XP to student profile
+  const { data: studentProfile } = await supabase
+    .from('student_profiles')
+    .select('total_points, level, current_streak')
+    .eq('id', studentId)
+    .maybeSingle();
+
+  if (studentProfile) {
+    const newPoints = (studentProfile.total_points || 0) + xpEarned;
+    const { level: newLevel } = calculateLevel(newPoints);
+
+    await supabase
+      .from('student_profiles')
+      .update({
+        total_points: newPoints,
+        level: newLevel,
+        current_streak: Math.max(1, (studentProfile.current_streak || 0) + 1),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', studentId);
+  }
+
+  // 5. Recalculate Topic Mastery
+  const { data: pastAttempts } = await supabase
+    .from('practice_attempts')
+    .select('is_correct, hints_used, time_spent_seconds')
+    .eq('student_id', studentId)
+    .eq('topic_id', topic_id);
+
+  const attemptsList = pastAttempts || [];
+  const totalCount = attemptsList.length;
+  const correctCount = attemptsList.filter((a) => a.is_correct).length;
+  const incorrectCount = totalCount - correctCount;
+  const totalHints = attemptsList.reduce((acc, a) => acc + (a.hints_used || 0), 0);
+  const accuracy = totalCount > 0 ? correctCount / totalCount : 0;
+
+  const { mastery_score, status } = calculateTopicMastery({
+    accuracy,
+    attempts: totalCount,
+    correct_attempts: correctCount,
+    incorrect_attempts: incorrectCount,
+    hints_used: totalHints,
+    difficulty: question.difficulty || 2,
+  });
+
+  await supabase
+    .from('topic_mastery')
+    .upsert(
+      {
+        student_id: studentId,
+        topic_id,
+        mastery_score,
+        status,
+        confidence_level: totalCount >= 5 ? 'high' : totalCount >= 2 ? 'medium' : 'low',
+        accuracy_rate: accuracy,
+        total_attempts: totalCount,
+        last_assessed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id,topic_id' }
+    );
+
+  // Update or resolve weak_topics
+  if (status === 'needs_support' || mastery_score < 65) {
+    await supabase.from('weak_topics').upsert(
+      {
+        student_id: studentId,
+        topic_id,
+        accuracy_rate: accuracy,
+        total_attempts: totalCount,
+        incorrect_count: incorrectCount,
+        status: 'improving',
+        last_evaluated_at: new Date().toISOString(),
+      },
+      { onConflict: 'student_id,topic_id' }
+    );
+  } else if (mastery_score >= 75) {
+    await supabase
+      .from('weak_topics')
+      .update({
+        status: 'resolved',
+        last_evaluated_at: new Date().toISOString(),
+      })
+      .eq('student_id', studentId)
+      .eq('topic_id', topic_id);
+  }
+
+  return {
+    isCorrect,
+    correctOptionIndex: question.correct_option_index,
+    explanation: question.explanation || (isCorrect ? 'Great job! You mastered this core concept.' : 'Take a moment to review the steps. Keep going!'),
+    mistakeCategory,
+    xpEarned,
+    updatedMastery: { mastery_score, status },
+  };
+}
+

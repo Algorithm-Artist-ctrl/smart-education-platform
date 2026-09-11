@@ -30,7 +30,7 @@ export function SidebarRail({ className = '' }: { className?: string }) {
     { href: '/student/missions', label: 'Life Missions', icon: <Globe className="w-5 h-5" /> },
     { href: '/student/portfolio', label: 'Portfolio', icon: <Layers className="w-5 h-5" /> },
     { href: '/student/quests', label: 'Quests', icon: <Target className="w-5 h-5" /> },
-    { href: '/student/subjects', label: 'Subjects', icon: <BookOpen className="w-5 h-5" /> },
+    { href: '/student/learning', label: 'My Learning', icon: <BookOpen className="w-5 h-5" /> },
     { href: '/student/revision', label: 'Revision', icon: <RefreshCw className="w-5 h-5" /> },
     { href: '/student/career', label: 'Career', icon: <Compass className="w-5 h-5" /> },
   ];

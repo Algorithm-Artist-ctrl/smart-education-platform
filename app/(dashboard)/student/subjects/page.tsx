@@ -2,5 +2,5 @@
 import { redirect } from 'next/navigation';
 
 export default function SubjectsPage() {
-  redirect('/student/map');
+  redirect('/student/learning');
 }

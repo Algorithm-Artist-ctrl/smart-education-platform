@@ -26,6 +26,11 @@ interface NovaAICompanionProps {
   weakTopicName?: string | null;
   studentName?: string;
   recommendedSubject?: string;
+  currentModule?: string;
+  currentChapter?: string;
+  currentTopic?: string;
+  learningObjectives?: string[];
+  lessonPosition?: string;
   level?: number;
   compact?: boolean;
   mode?: 'inline' | 'floating' | 'both';
@@ -37,6 +42,11 @@ export default function NovaAICompanion({
   weakTopicName,
   studentName = 'Cadet',
   recommendedSubject = 'Mathematics',
+  currentModule,
+  currentChapter,
+  currentTopic,
+  learningObjectives,
+  lessonPosition,
   level = 1,
   compact = false,
   mode = 'both',
@@ -303,6 +313,11 @@ export default function NovaAICompanion({
             studentName,
             level,
             currentSubject: recommendedSubject,
+            currentModule,
+            currentChapter,
+            currentTopic,
+            learningObjectives,
+            lessonPosition,
             weakTopics: weakTopicName ? [weakTopicName] : [],
             language,
             actionType,

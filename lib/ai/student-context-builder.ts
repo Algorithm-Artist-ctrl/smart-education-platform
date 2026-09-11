@@ -9,7 +9,11 @@ export interface RuntimeStudentContext {
   grade?: string;
   board?: string;
   currentSubject?: string;
+  currentModule?: string;
+  currentChapter?: string;
   currentTopic?: string;
+  learningObjectives?: string[];
+  lessonPosition?: string;
   topicMastery?: number;
   weakTopics?: string[];
   language?: 'en' | 'hi' | 'hinglish';
@@ -26,6 +30,10 @@ export interface ResolvedStudentContext {
   preferredLanguage: 'en' | 'hi' | 'hinglish';
   conversationStyle: 'simple' | 'friendly' | 'hinglish' | 'detailed' | 'visual';
   explanationStyle: string;
+  currentModule?: string;
+  currentChapter?: string;
+  learningObjectives?: string[];
+  lessonPosition?: string;
   interactionPreferences: {
     hint_first?: boolean;
     show_examples?: boolean;
@@ -161,7 +169,11 @@ export async function buildStudentLearningContext(
     xp: 0,
     streak: 0,
     currentSubject: resolvedSubject || runtime.currentSubject || 'General Academics',
+    currentModule: runtime.currentModule,
+    currentChapter: runtime.currentChapter,
     currentTopic: resolvedTopic || runtime.currentTopic || 'Academic Concepts',
+    learningObjectives: runtime.learningObjectives,
+    lessonPosition: runtime.lessonPosition,
     topicMastery: runtime.topicMastery ?? 60,
     weakTopics: runtime.weakTopics || [],
     strengths: [],
@@ -400,7 +412,11 @@ You are tutoring ${studentName}, a Grade ${grade} (${board} curriculum) student 
 
 Current Academic Anchor:
 - Subject: ${currentSubject}
+${ctx.currentModule ? `- Module: ${ctx.currentModule}` : ''}
+${ctx.currentChapter ? `- Chapter: ${ctx.currentChapter}` : ''}
 - Topic: ${currentTopic}
+${ctx.learningObjectives?.length ? `- Learning Objectives: ${ctx.learningObjectives.join('; ')}` : ''}
+${ctx.lessonPosition ? `- Active Lesson Step: ${ctx.lessonPosition}` : ''}
 - Verified Topic Mastery: ${topicMastery}%
 ${memoryNotes}
 ${ctx.wellbeingSignal}

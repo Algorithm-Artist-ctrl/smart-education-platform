@@ -166,7 +166,7 @@ ALTER TABLE public.wellbeing_signals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nova_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.nova_messages ENABLE ROW LEVEL SECURITY;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own topic mastery" ON public.topic_mastery;
     CREATE POLICY "Students manage own topic mastery"
         ON public.topic_mastery FOR ALL
@@ -176,9 +176,9 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = topic_mastery.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own diagnostic results" ON public.diagnostic_results;
     CREATE POLICY "Students manage own diagnostic results"
         ON public.diagnostic_results FOR ALL
@@ -188,9 +188,9 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = diagnostic_results.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own creativity submissions" ON public.creativity_submissions;
     CREATE POLICY "Students manage own creativity submissions"
         ON public.creativity_submissions FOR ALL
@@ -200,16 +200,16 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = creativity_submissions.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Anyone authenticated can view life missions" ON public.life_missions;
     CREATE POLICY "Anyone authenticated can view life missions"
         ON public.life_missions FOR SELECT
         TO authenticated USING (true);
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own mission submissions" ON public.mission_submissions;
     CREATE POLICY "Students manage own mission submissions"
         ON public.mission_submissions FOR ALL
@@ -219,9 +219,9 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = mission_submissions.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own portfolio items" ON public.portfolio_items;
     CREATE POLICY "Students manage own portfolio items"
         ON public.portfolio_items FOR ALL
@@ -232,9 +232,9 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = portfolio_items.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Students manage own wellbeing signals" ON public.wellbeing_signals;
     CREATE POLICY "Students manage own wellbeing signals"
         ON public.wellbeing_signals FOR ALL
@@ -244,16 +244,16 @@ DO 8832 BEGIN
             OR public.is_admin_or_super()
             OR EXISTS (SELECT 1 FROM public.student_profiles sp WHERE sp.id = wellbeing_signals.student_id AND sp.parent_id = auth.uid())
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Student private access to nova conversations" ON public.nova_conversations;
     CREATE POLICY "Student private access to nova conversations"
         ON public.nova_conversations FOR ALL
         USING (student_id = auth.uid() OR public.is_admin_or_super());
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
-DO 8832 BEGIN
+DO $$ BEGIN
     DROP POLICY IF EXISTS "Student private access to nova messages" ON public.nova_messages;
     CREATE POLICY "Student private access to nova messages"
         ON public.nova_messages FOR ALL
@@ -264,7 +264,7 @@ DO 8832 BEGIN
                 AND (nc.student_id = auth.uid() OR public.is_admin_or_super())
             )
         );
-EXCEPTION WHEN others THEN null; END 8832;
+EXCEPTION WHEN others THEN null; END $$;
 
 -- 10. Seed Starter Life Missions
 INSERT INTO public.life_missions (id, title, subject_name, category, description, task_prompt, xp_reward, coins_reward)
@@ -276,6 +276,17 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 11. Quests Table (Daily Bounties & Weekly Expeditions)
+ALTER TABLE public.quests 
+    ADD COLUMN IF NOT EXISTS description TEXT,
+    ADD COLUMN IF NOT EXISTS coin_reward INT DEFAULT 20,
+    ADD COLUMN IF NOT EXISTS progress_current INT DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS progress_total INT DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS is_completed BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS is_claimed BOOLEAN DEFAULT FALSE;
+
+ALTER TABLE public.quests DROP CONSTRAINT IF EXISTS quests_quest_type_check;
+ALTER TABLE public.quests ADD CONSTRAINT quests_quest_type_check CHECK (quest_type = ANY (ARRAY['topic'::text, 'quiz'::text, 'revision'::text, 'assignment'::text, 'streak'::text, 'daily'::text, 'weekly'::text, 'epic'::text, 'special'::text]));
+
 CREATE TABLE IF NOT EXISTS public.quests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
