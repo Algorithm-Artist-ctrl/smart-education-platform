@@ -6,13 +6,25 @@ import { GoogleGenAI } from '@google/genai';
 // Primary: gemini-2.5-flash (Google official stable workhorse, hybrid reasoning, zero shutdown date)
 // Fallback 1: gemini-2.5-flash-lite (cost-effective, high-throughput fallback)
 // Fallback 2: gemini-3.5-flash (latest generation flash model)
-export const SUPPORTED_MODELS = [
+export const DEFAULT_MODELS = [
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
   'gemini-3.5-flash',
 ] as const;
 
-export type SupportedGeminiModel = typeof SUPPORTED_MODELS[number];
+export type SupportedGeminiModel = typeof DEFAULT_MODELS[number];
+
+/**
+ * Returns prioritized list of Gemini models, allowing process.env.GEMINI_MODEL to override primary.
+ */
+export function getActiveModels(): string[] {
+  const envModel = process.env.GEMINI_MODEL?.trim();
+  const models = [
+    ...(envModel ? [envModel] : []),
+    ...DEFAULT_MODELS,
+  ];
+  return Array.from(new Set(models));
+}
 
 export interface GeminiResponseResult {
   success: boolean;
@@ -45,12 +57,13 @@ export function getGeminiApiKey(): string | undefined {
  */
 export async function checkGeminiHealth(): Promise<HealthCheckResult> {
   const apiKey = getGeminiApiKey();
+  const activeModels = getActiveModels();
 
   if (!apiKey) {
     return {
       status: 'offline',
       configured: false,
-      model: SUPPORTED_MODELS[0],
+      model: activeModels[0],
       sdk: '@google/genai',
       message: 'GEMINI_API_KEY is not configured on the server. Please set GEMINI_API_KEY in your deployment environment.',
     };
@@ -62,7 +75,7 @@ export async function checkGeminiHealth(): Promise<HealthCheckResult> {
     let responseText = '';
     let lastError: any = null;
 
-    for (const model of SUPPORTED_MODELS) {
+    for (const model of activeModels) {
       try {
         const testResponse = await ai.models.generateContent({
           model,
@@ -100,7 +113,7 @@ export async function checkGeminiHealth(): Promise<HealthCheckResult> {
     return {
       status: 'offline',
       configured: true,
-      model: SUPPORTED_MODELS[0],
+      model: activeModels[0],
       sdk: '@google/genai',
       error: err?.message || 'Failed to communicate with Gemini API',
       message: 'Gemini API key is set, but the API request failed. Verify key permissions or quota.',
@@ -109,7 +122,14 @@ export async function checkGeminiHealth(): Promise<HealthCheckResult> {
 }
 
 /**
- * Generates an educational companion response with multi-model cascade and structured error handling.
+ * Helper to pause execution for backoff retries.
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Generates an educational companion response with multi-model cascade, retries, and structured error handling.
  */
 export async function generateCompanionResponse(options: {
   contents: Array<{ role: string; parts: Array<{ text: string }> }>;
@@ -118,13 +138,14 @@ export async function generateCompanionResponse(options: {
   maxOutputTokens?: number;
 }): Promise<GeminiResponseResult> {
   const apiKey = getGeminiApiKey();
+  const activeModels = getActiveModels();
 
   if (!apiKey) {
     return {
       success: false,
       error: 'GEMINI_API_KEY is not configured on the server.',
       errorCode: 'KEY_NOT_CONFIGURED',
-      model: SUPPORTED_MODELS[0],
+      model: activeModels[0],
     };
   }
 
@@ -140,28 +161,43 @@ export async function generateCompanionResponse(options: {
   let usedModel = '';
   let lastError: any = null;
 
-  for (const model of SUPPORTED_MODELS) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents,
-        config: {
-          systemInstruction,
-          temperature,
-          maxOutputTokens,
-        },
-      });
+  for (const model of activeModels) {
+    // Attempt up to 2 tries per model for transient rate limits or 503s
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            temperature,
+            maxOutputTokens,
+          },
+        });
 
-      if (response?.text) {
-        replyText = response.text;
-        usedModel = model;
-        break;
-      } else {
-        lastError = new Error(`Model ${model} returned empty response`);
+        if (response?.text) {
+          replyText = response.text;
+          usedModel = model;
+          break;
+        } else {
+          lastError = new Error(`Model ${model} returned empty response`);
+        }
+      } catch (sdkErr: any) {
+        lastError = sdkErr;
+        const msg = sdkErr?.message || '';
+        const isTransient = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('503') || msg.includes('ETIMEDOUT');
+
+        if (isTransient && attempt === 0) {
+          // Wait briefly before 2nd try
+          await delay(600);
+          continue;
+        }
+        break; // Advance to next model in cascade
       }
-    } catch (sdkErr: any) {
-      lastError = sdkErr;
-      console.warn(`[Gemini Service] Model ${model} attempt note:`, sdkErr?.message || sdkErr);
+    }
+
+    if (replyText && usedModel) {
+      break;
     }
   }
 
@@ -204,6 +240,6 @@ export async function generateCompanionResponse(options: {
     success: false,
     error: studentFacingError,
     errorCode,
-    model: usedModel || SUPPORTED_MODELS[0],
+    model: usedModel || activeModels[0],
   };
 }

@@ -77,23 +77,28 @@ export default async function ParentDashboardPage() {
     );
   }
 
-  // Fetch verified child's performance, masteries, and life missions
+  // Fetch verified child's performance, masteries, recent study sessions, and life missions
   const firstChildId = children[0].id;
-  const [attRes, wtRes, masteryRes, missionsRes] = await Promise.all([
+  const [attRes, wtRes, masteryRes, missionsRes, sessionsRes] = await Promise.all([
     supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', firstChildId).order('created_at', { ascending: false }).limit(5),
     supabase.from('weak_topics').select('*, topic:topics(*)').eq('student_id', firstChildId).eq('status', 'active').limit(2),
     supabase.from('topic_mastery').select('*, topic:topics(*)').eq('student_id', firstChildId).order('mastery_score', { ascending: false }).limit(3),
     supabase.from('mission_submissions').select('*').eq('student_id', firstChildId).eq('status', 'completed'),
+    supabase.from('study_sessions').select('*, topic:topics(*)').eq('student_id', firstChildId).order('created_at', { ascending: false }).limit(3),
   ]);
 
   const childQuizAttempts = attRes.data || [];
   const childWeakTopics = wtRes.data || [];
   const childMasteries = (masteryRes.data || []) as any[];
   const childMissions = (missionsRes.data || []) as any[];
+  const childSessions = (sessionsRes.data || []) as any[];
   const activeChild = children[0];
   const childAvgScore = childQuizAttempts.length > 0
     ? Math.round(childQuizAttempts.reduce((acc: number, a: any) => acc + (a.percentage || 0), 0) / childQuizAttempts.length)
     : null;
+
+  // Dynamic conversation prompts derived from real topics explored (never from private AI chat logs)
+  const recentTopicName = childSessions[0]?.topic?.name || childMasteries[0]?.topic?.name || 'Science and Problem Solving';
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
@@ -205,19 +210,19 @@ export default async function ParentDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/5 space-y-1.5">
               <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                <span>💬</span> Connect Science to Real Life
+                <span>💬</span> Connect {recentTopicName} to Real Life
               </span>
               <p className="text-xs text-slate-300 leading-relaxed">
-                "Ask your child: 'Can you show me how friction works when sliding things across our kitchen floor?' Let them be the teacher and explain it to you!"
+                "Ask your child: 'Can you show me how {recentTopicName} applies in everyday life or video games?' Letting your child explain in their own words builds authentic conceptual mastery."
               </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950/70 border border-white/5 space-y-1.5">
               <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
-                <span>🌱</span> Praise Persistence, Not Scores
+                <span>🌱</span> Celebrate Effort & Persistence
               </span>
               <p className="text-xs text-slate-300 leading-relaxed">
-                "Say: 'I noticed you kept trying on that tricky math topic even when it felt tough. That determination is what builds real genius.'"
+                "Say: 'I noticed your consistent daily study habit. Seeing you work through challenging problems with your learning partner is true growth.'"
               </p>
             </div>
           </div>

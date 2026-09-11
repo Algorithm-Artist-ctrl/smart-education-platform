@@ -22,19 +22,25 @@ const getCachedStats = unstable_cache(
     let subjectsCount = 3;
     let questionsCount = 9;
     let studentsCount = 1;
+    let accuracyRate = 88;
 
     try {
-      const [subRes, qRes, pRes] = await Promise.all([
+      const [subRes, qRes, pRes, attRes] = await Promise.all([
         supabase.from('subjects').select('*', { count: 'exact', head: true }),
         supabase.from('questions').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
+        supabase.from('quiz_attempts').select('percentage').limit(50),
       ]);
       if (subRes.count) subjectsCount = subRes.count;
       if (qRes.count) questionsCount = qRes.count;
       if (pRes.count) studentsCount = pRes.count;
+      if (attRes.data && attRes.data.length > 0) {
+        const sum = attRes.data.reduce((acc, row) => acc + (row.percentage || 0), 0);
+        accuracyRate = Math.round(sum / attRes.data.length);
+      }
     } catch {}
 
-    return { subjectsCount, questionsCount, studentsCount };
+    return { subjectsCount, questionsCount, studentsCount, accuracyRate };
   },
   ['landing-public-stats'],
   { revalidate: 300 }

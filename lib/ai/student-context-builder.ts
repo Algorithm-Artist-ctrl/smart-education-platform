@@ -16,6 +16,7 @@ export interface RuntimeStudentContext {
   conversationStyle?: 'simple' | 'friendly' | 'hinglish' | 'detailed' | 'visual';
   actionType?: string;
   userPromptText?: string;
+  recentMessages?: Array<{ role?: string; sender?: string; text?: string }>;
 }
 
 export interface ResolvedStudentContext {
@@ -56,6 +57,49 @@ export interface ResolvedStudentContext {
 }
 
 /**
+ * Heuristic topic and subject inference from conversational turns.
+ */
+function inferTopicFromText(text: string): { topic: string; subject: string } | null {
+  const lower = text.toLowerCase();
+
+  if (/quadratic|parabola|discriminant|ax\^2|x\^2|roots of equation/.test(lower)) {
+    return { topic: 'Quadratic Equations', subject: 'Mathematics' };
+  }
+  if (/trigonometr|sin\(|cos\(|tan\(|sin\^2|cos\^2|hypotenuse/.test(lower)) {
+    return { topic: 'Trigonometry', subject: 'Mathematics' };
+  }
+  if (/pythagor|theorem|geometry|circle|perimeter|area of|volume of|triangle/.test(lower)) {
+    return { topic: 'Geometry & Mensuration', subject: 'Mathematics' };
+  }
+  if (/linear equation|algebra|polynomial|factori[zs]ation/.test(lower)) {
+    return { topic: 'Algebra', subject: 'Mathematics' };
+  }
+  if (/newton|inertia|force|friction|momentum|laws of motion|velocity|acceleration/.test(lower)) {
+    return { topic: 'Laws of Motion', subject: 'Physics' };
+  }
+  if (/light|refraction|reflection|lens|prism|mirror|focal length/.test(lower)) {
+    return { topic: 'Light - Reflection & Refraction', subject: 'Physics' };
+  }
+  if (/gravity|gravitation|free fall|weight vs mass/.test(lower)) {
+    return { topic: 'Gravitation', subject: 'Physics' };
+  }
+  if (/electricity|circuit|ohm's law|current|voltage|resistance/.test(lower)) {
+    return { topic: 'Electricity & Circuits', subject: 'Physics' };
+  }
+  if (/photo-?synthesis|chlorophyll|cell|respiration|dna|mitochondria|biology|heart|circulation/.test(lower)) {
+    return { topic: 'Life Processes & Biology', subject: 'Biology' };
+  }
+  if (/atom|molecule|chemical reaction|acid|base|ph scale|periodic table|oxidation/.test(lower)) {
+    return { topic: 'Chemical Reactions & Matter', subject: 'Chemistry' };
+  }
+  if (/python|code|variable|loop|array|function|algorithm|queue|stack|binary search/.test(lower)) {
+    return { topic: 'Python Fundamentals & Data Structures', subject: 'Computer Science' };
+  }
+
+  return null;
+}
+
+/**
  * Reads verified student records from Supabase and merges them with runtime context.
  */
 export async function buildStudentLearningContext(
@@ -79,10 +123,32 @@ export async function buildStudentLearningContext(
     detectedMode = 'hinglish';
   }
 
+  // Dynamic Topic Resolution
+  let resolvedTopic = runtime.currentTopic;
+  let resolvedSubject = runtime.currentSubject;
+
+  // 1. Check current prompt
+  const directInference = inferTopicFromText(userPrompt);
+  if (directInference) {
+    resolvedTopic = directInference.topic;
+    resolvedSubject = directInference.subject;
+  } else if (runtime.recentMessages && runtime.recentMessages.length > 0) {
+    // 2. Scan recent conversation messages backwards for topic context
+    for (let i = runtime.recentMessages.length - 1; i >= 0; i--) {
+      const msgText = runtime.recentMessages[i].text || '';
+      const priorInference = inferTopicFromText(msgText);
+      if (priorInference) {
+        resolvedTopic = priorInference.topic;
+        resolvedSubject = priorInference.subject;
+        break;
+      }
+    }
+  }
+
   // Base fallback defaults
   const resolved: ResolvedStudentContext = {
     studentId: studentId || '',
-    studentName: runtime.studentName || 'Explorer',
+    studentName: runtime.studentName || 'Cadet',
     aiPartnerName: 'Nova',
     preferredLanguage: runtime.language || 'en',
     conversationStyle: runtime.conversationStyle || 'friendly',
@@ -94,9 +160,9 @@ export async function buildStudentLearningContext(
     level: runtime.level || 1,
     xp: 0,
     streak: 0,
-    currentSubject: runtime.currentSubject || 'Mathematics',
-    currentTopic: runtime.currentTopic || 'Quadratic Equations',
-    topicMastery: runtime.topicMastery ?? 50,
+    currentSubject: resolvedSubject || runtime.currentSubject || 'General Academics',
+    currentTopic: resolvedTopic || runtime.currentTopic || 'Academic Concepts',
+    topicMastery: runtime.topicMastery ?? 60,
     weakTopics: runtime.weakTopics || [],
     strengths: [],
     recentMistakes: [],
@@ -123,7 +189,7 @@ export async function buildStudentLearningContext(
       supabase.from('student_ai_profiles').select('*').eq('student_id', studentId).maybeSingle(),
       supabase.from('student_profiles').select('grade, board, level, total_points, current_streak, preferred_language, learning_preferences, support_signals, strengths, ai_partner_name').eq('id', studentId).maybeSingle(),
       supabase.from('profiles').select('full_name').eq('id', studentId).maybeSingle(),
-      supabase.from('topic_mastery').select('mastery_score, status, topic:topics(name, subject:subjects(name))').eq('student_id', studentId).order('updated_at', { ascending: false }).limit(4),
+      supabase.from('topic_mastery').select('mastery_score, status, topic:topics(name, subject:subjects(name))').eq('student_id', studentId).order('updated_at', { ascending: false }).limit(5),
       supabase.from('weak_topics').select('topic:topics(name)').eq('student_id', studentId).eq('status', 'active').limit(3),
       supabase.from('quiz_attempts').select('score, percentage, answers').eq('student_id', studentId).order('created_at', { ascending: false }).limit(3),
       supabase.from('diagnostic_results').select('identified_strengths, identified_support_signals').eq('student_id', studentId).order('completed_at', { ascending: false }).limit(1).maybeSingle(),
@@ -162,19 +228,23 @@ export async function buildStudentLearningContext(
       }
     }
 
+    // Match topic mastery if a specific topic was detected or passed
     if (masteryRes.data && masteryRes.data.length > 0) {
-      // Find matching mastery for runtime topic if specified
-      if (runtime.currentTopic) {
-        const match = masteryRes.data.find(
-          (m: any) => m.topic?.name?.toLowerCase() === runtime.currentTopic?.toLowerCase()
+      if (resolvedTopic) {
+        const match: any = masteryRes.data.find(
+          (m: any) => m.topic?.name?.toLowerCase() === resolvedTopic?.toLowerCase() ||
+                      resolvedTopic?.toLowerCase().includes(m.topic?.name?.toLowerCase())
         );
         if (match) {
           resolved.topicMastery = Number(match.mastery_score) || 0;
+          const matchSubj = match.topic?.subject?.name || match.topic?.subject?.[0]?.name;
+          if (matchSubj) resolved.currentSubject = matchSubj;
         }
       } else {
         const top = masteryRes.data[0] as any;
         if (top.topic?.name) resolved.currentTopic = top.topic.name;
-        if (top.topic?.subject?.name) resolved.currentSubject = top.topic.subject.name;
+        const topSubj = top.topic?.subject?.name || top.topic?.subject?.[0]?.name;
+        if (topSubj) resolved.currentSubject = topSubj;
         resolved.topicMastery = Number(top.mastery_score) || 0;
       }
     }
@@ -289,24 +359,30 @@ export function constructSystemPrompt(ctx: ResolvedStudentContext): string {
 
   // Action-Specific Directive
   let actionDirective = '';
-  if (actionType === 'explain_10') {
-    actionDirective = 'SPECIAL ACTION: Explain this concept as if the student is 10 years old. Use a vivid everyday analogy and short, intuitive sentences.';
+  if (actionType === 'explain_10' || actionType === 'explain_simple') {
+    actionDirective = 'SPECIAL ACTION: Explain this concept simply and clearly in short, intuitive sentences. Use a vivid everyday analogy and zero unnecessary jargon.';
   } else if (actionType === 'simplify') {
-    actionDirective = 'SPECIAL ACTION: Make your explanation as simple and straightforward as possible in 3 clear bullet points with zero unnecessary jargon.';
+    actionDirective = 'SPECIAL ACTION: Make your explanation as simple and straightforward as possible in 3 clear bullet points.';
   } else if (actionType === 'example') {
-    actionDirective = 'SPECIAL ACTION: Provide a memorable, real-world everyday example illustrating this concept in action.';
+    actionDirective = 'SPECIAL ACTION: Provide a memorable, concrete real-world example illustrating this concept in action.';
   } else if (actionType === 'hint') {
     actionDirective = 'SPECIAL ACTION: Give a subtle, guiding hint to help the student solve the problem on their own. DO NOT give away the final answer.';
   } else if (actionType === 'practice') {
     actionDirective = `SPECIAL ACTION: Generate ONE targeted practice question on ${currentTopic} tailored to mastery level (${topicMastery}%). Include 4 multiple choice options (A, B, C, D) and ask the student to pick the answer. Do NOT reveal the solution yet.`;
   } else if (actionType === 'quiz') {
     actionDirective = `SPECIAL ACTION: Formulate a mini-quiz with 2 progressive conceptual questions on ${currentTopic}. Ask Question 1 first.`;
-  } else if (actionType === 'explain_step_by_step') {
+  } else if (actionType === 'visual') {
+    actionDirective = 'SPECIAL ACTION: Explain this concept using vivid spatial mental models, ASCII diagrams, or visual physical analogies.';
+  } else if (actionType === 'step_by_step') {
     actionDirective = 'SPECIAL ACTION: Walk through the solution step-by-step with clear numbered stages, explaining the logic of each step.';
   } else if (actionType === 'challenge') {
     actionDirective = `SPECIAL ACTION: Pose an advanced, thought-provoking challenge problem on ${currentTopic} that requires synthesis and creative problem solving.`;
-  } else if (actionType === 'why_wrong') {
-    actionDirective = 'SPECIAL ACTION: Help the student diagnose where their reasoning went wrong. Explain the misconception constructively without any judgment.';
+  } else if (actionType === 'misconception' || actionType === 'why_wrong') {
+    actionDirective = 'SPECIAL ACTION: Help the student diagnose where typical reasoning goes wrong. Explain the misconception constructively with zero judgment.';
+  } else if (actionType === 'revise') {
+    actionDirective = `SPECIAL ACTION: Provide a crisp 3-point revision summary of ${currentTopic} with key formulas and takeaways.`;
+  } else if (actionType === 'why_am_i_learning_this') {
+    actionDirective = `SPECIAL ACTION (WHY AM I LEARNING THIS): Explain where and why ${currentTopic} is used in the real world: engineering, computer games, space, architecture, sports, or daily life. Inspire the student!`;
   } else if (actionType === 'progress_analysis') {
     actionDirective = `SPECIAL ACTION: Provide an encouraging, honest overview of the student's progress based on real database numbers (Current mastery on ${currentTopic}: ${topicMastery}%, Streak: ${ctx.streak} days, Level: ${level}). Highlight strengths and suggest their next best action.`;
   }
@@ -322,7 +398,7 @@ export function constructSystemPrompt(ctx: ResolvedStudentContext): string {
   return `You are ${aiPartnerName}, the personal, adaptive AI learning partner for ${studentName} on Smart Edu.
 You are tutoring ${studentName}, a Grade ${grade} (${board} curriculum) student currently at Level ${level} (${ctx.xp} XP, ${ctx.streak} day streak).
 
-Current Academic Context:
+Current Academic Anchor:
 - Subject: ${currentSubject}
 - Topic: ${currentTopic}
 - Verified Topic Mastery: ${topicMastery}%
@@ -337,10 +413,19 @@ Learner Preferences:
 ${preferenceDirectives}
 
 ${actionDirective ? `${actionDirective}\n` : ''}
-Core Pedagogical Rules:
-1. IDENTITY & TONE: Your name is ${aiPartnerName}. Act as an authentic, dedicated learning companion. You are deeply invested in ${studentName}'s genuine understanding and intellectual growth.
-2. CONVERSATION CONTINUITY: Always maintain multi-turn context. If the student says "example?", "give me one", "why?", or "I don't understand", understand they are referring to ${currentTopic} and your preceding messages.
-3. POSITIVE FAILURE: If the student gets an answer wrong or makes an error, praise their effort first. Highlight which part of their thinking was smart, pinpoint the exact conceptual turn, and offer an analogy or guiding hint.
-4. ABSOLUTE MEDICAL GUARDRAIL: NEVER diagnose, label, or mention medical, psychological, or learning disabilities (e.g. dyslexia, ADHD, anxiety). Strictly describe academic tasks constructively (e.g. "You seem to benefit from step-by-step visual models" or "This topic needs a little more practice").
-5. FORMATTING: Use clean Markdown with bolding, numbered lists, formula blocks, and neat spacing so math and science are easy on the eyes.`;
+Pedagogical Directives for Conversational Turns:
+1. IDENTITY & PERSONA: Your name is ${aiPartnerName}. Act as ${studentName}'s personal study partner.
+2. MULTI-TURN GROUNDING:
+   - If the student asks a conversational follow-up like "like what?" or "give an example", provide a concrete, vivid example of the concept immediately preceding.
+   - If the student asks "why x²?" or "why [term]?", explain the exact mathematical/conceptual reason.
+   - If the student asks "give me practice" or "practice problem", generate 1 targeted practice problem matching their mastery level.
+   - If the student says "I don't understand" or "easy way", switch teaching strategies immediately: drop jargon and use an everyday physical analogy.
+   - If the student asks "formula?", give the relevant formulas with clear variable definitions.
+   - If the student asks "test me", pose 1 interactive diagnostic question.
+   - If the student asks "what did I get wrong?", examine their prior response constructively.
+   - If the student asks "why am I learning this?", reveal real-world engineering, aerospace, video game, or medical applications.
+   - If the student introduces a NEW subject or topic (e.g. Physics, Biology, History, Computer Science), seamlessly transition to that subject without forcing the previous anchor topic!
+3. ZERO-SHAMING FEEDBACK: Never use words like "Wrong", "Failed", or "Poor". If a student is incorrect, say "No worries — this concept has a subtle trick to it" and provide a hint, an example, and an encouraging retry.
+4. ABSOLUTE MEDICAL GUARDRAIL: NEVER diagnose, label, or mention medical, psychological, or neurological disorders (such as ADHD, dyslexia, autism, anxiety). Always use constructive learning phrasing (e.g. "You seem to grasp concepts faster with visual diagrams" or "Let's build confidence on this step").
+5. CLEAN FORMATTING: Use bold key terms, short readable paragraphs, and clean math/formula notation so explanations are comfortable to read.`;
 }

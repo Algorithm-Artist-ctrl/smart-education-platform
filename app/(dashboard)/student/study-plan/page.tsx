@@ -10,6 +10,7 @@ import { enqueueAction } from '@/lib/offline/db';
 import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
+import SmartSessionSelector from '@/components/gamification/SmartSessionSelector';
 import { 
   Calendar as CalendarIcon, 
   CheckCircle2, 
@@ -243,6 +244,11 @@ export default function StudyPlanPage() {
             </div>
           </div>
         </div>
+
+        {/* Adaptive Time-Calibrated Smart Session Architect */}
+        <SmartSessionSelector
+          initialDuration={15}
+        />
 
         {/* Main 2-Column Grid matching Screen 7 */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

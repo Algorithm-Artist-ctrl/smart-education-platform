@@ -12,7 +12,7 @@ import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import WellbeingCheckIn from '@/components/gamification/WellbeingCheckIn';
 import AIPartnerSetupTrigger from '@/components/gamification/AIPartnerSetupTrigger';
 import { calculateLevel } from '@/lib/gamification-engine';
-import { getRecommendedNextStep } from '@/lib/learning-engine';
+import { getNextBestLearningAction, getRecommendedNextStep } from '@/lib/learning-engine';
 import { translations, Language } from '@/lib/i18n';
 import { 
   Sparkles, 
@@ -122,6 +122,7 @@ export default async function StudentDashboardPage() {
     attemptsRes,
     wellbeingRes,
     recommendedStep,
+    nextBestAction,
     masteryRes,
     diagnosticRes,
     topicsRes,
@@ -166,6 +167,7 @@ export default async function StudentDashboardPage() {
       .eq('recorded_date', todayStr)
       .maybeSingle(),
     getRecommendedNextStep(supabase, user.id),
+    getNextBestLearningAction(supabase, user.id),
     supabase
       .from('topic_mastery')
       .select('topic_id, subject_id, mastery_score, status')
@@ -479,8 +481,13 @@ export default async function StudentDashboardPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300 font-bold uppercase">
-                      {t.adaptive}
+                      {nextBestAction?.action ? nextBestAction.action.replace('_', ' ') : t.adaptive}
                     </span>
+                    {nextBestAction && (
+                      <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                        +{nextBestAction.xpReward} XP
+                      </span>
+                    )}
                     <AIPartnerSetupTrigger
                       partnerName={partnerName}
                       preferredLanguage={aiProfile?.preferred_language || 'en'}
@@ -493,20 +500,20 @@ export default async function StudentDashboardPage() {
                 <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/25 text-xs text-slate-200 leading-relaxed mb-2 space-y-1.5">
                   <div className="font-bold text-white text-xs flex items-center gap-1.5">
                     <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>{recommendedStep.title}</span>
+                    <span>{nextBestAction?.title || recommendedStep.title}</span>
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    {recommendedStep.description}
+                    {nextBestAction?.description || recommendedStep.description}
                   </p>
                   <p className="text-[10px] text-cyan-400/90 italic pt-1 border-t border-cyan-500/20">
-                    🎯 {recommendedStep.reason}
+                    🎯 {nextBestAction?.reason || recommendedStep.reason}
                   </p>
                 </div>
               </div>
 
               <div className="pt-2 flex items-center gap-2">
                 <Link
-                  href={recommendedStep.targetUrl}
+                  href={nextBestAction?.targetUrl || recommendedStep.targetUrl}
                   className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-cyan-200" />

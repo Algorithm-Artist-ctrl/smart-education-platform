@@ -480,3 +480,48 @@ export interface NovaMessage {
   created_at: string;
 }
 
+export interface StudySession {
+  id: string;
+  student_id: string;
+  subject_id?: string | null;
+  topic_id?: string | null;
+  duration_minutes: 5 | 10 | 15 | 20 | 30 | 45 | 60;
+  session_type: 'quick_burst' | 'concept_deep_dive' | 'revision' | 'practice' | 'challenge';
+  tasks_planned: Array<{ title: string; type: string; duration_minutes: number }>;
+  tasks_completed: Array<{ title: string; completed_at: string }>;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'abandoned';
+  xp_earned?: number;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  subject?: Subject;
+  topic?: Topic;
+}
+
+export interface TeacherStudentRelationship {
+  id: string;
+  teacher_id: string;
+  student_id: string;
+  class_id?: string | null;
+  section_id?: string | null;
+  subject_id?: string | null;
+  status: 'active' | 'archived' | 'pending';
+  created_at: string;
+  teacher?: Profile;
+  student?: Profile;
+  class?: AcademicClass;
+}
+
+export interface ParentStudentRelationship {
+  id: string;
+  parent_id: string;
+  student_id: string;
+  relationship_type: 'father' | 'mother' | 'guardian' | 'other';
+  verified: boolean;
+  created_at: string;
+  parent?: Profile;
+  student?: Profile;
+}
+
+

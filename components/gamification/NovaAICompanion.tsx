@@ -114,16 +114,20 @@ export default function NovaAICompanion({
     return () => { isMounted = false; };
   }, []);
 
-  // Suggested prompt chips tailored to the student's personal partner
+  // Dynamically resolve active topic from weak topic, subject, or recent conversation
+  const resolvedTopic = weakTopicName || (recommendedSubject ? `${recommendedSubject} concepts` : 'Core Concepts');
+
+  // Dynamic suggested prompt chips tailored to the student's personal partner & topic
   const suggestedPrompts = [
-    { text: "What is a quadratic equation?", label: "What is a quadratic equation?", tag: "Concept" },
-    { text: "Quadratic equation kya hoti hai?", label: "Quadratic equation kya hoti hai?", tag: "Hinglish" },
-    { text: `Bhai ${currentPartnerName} simple way me samjha de`, label: `Bhai simple way me samjha de`, tag: "Casual" },
-    { text: "Give me a practice problem on Quadratic Equations", label: "Practice problem on Quadratic Equations", tag: "Practice" },
+    { text: `What is ${resolvedTopic}?`, label: `What is ${resolvedTopic}?`, tag: "Concept" },
+    { text: `Why am I learning ${resolvedTopic}? Where is it used in real life?`, label: `Why learn ${resolvedTopic}?`, tag: "Real World" },
+    { text: `Bhai ${currentPartnerName} ${resolvedTopic} simple way me samjha de`, label: `Bhai simple way me samjha de`, tag: "Casual" },
+    { text: `Give me a practice problem on ${resolvedTopic}`, label: `Practice problem on ${resolvedTopic}`, tag: "Practice" },
   ];
 
-  // All 10 specialized interactive learning modes per Product Specifications
+  // Specialized interactive learning modes including "Why am I learning this?"
   const quickActions = [
+    { label: 'Why learn this?', promptText: "Why am I learning this topic? What is its authentic real-world connection, and how is it used in technology, science, or daily life?", hi: 'हम यह क्यों सीख रहे हैं?', action: 'why_am_i_learning_this' },
     { label: 'Explain simply', promptText: "Can you explain this simply and clearly with no jargon?", hi: 'सरल भाषा में समझाएं', action: 'explain_simple' },
     { label: 'Explain with example', promptText: "Can you give me a memorable real-world example of this concept?", hi: 'उदाहरण देकर समझाएं', action: 'example' },
     { label: 'Give me a hint', promptText: "Give me a small hint to guide my thinking without giving away the answer.", hi: 'एक संकेत दें', action: 'hint' },

@@ -26,6 +26,7 @@ interface ExactLandingPageProps {
     studentsCount?: number;
     subjectsCount?: number;
     questionsCount?: number;
+    accuracyRate?: number;
   };
 }
 
@@ -370,7 +371,9 @@ export default function ExactLandingPage({ stats }: ExactLandingPageProps) {
                     <Rocket className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-sm sm:text-base font-black text-white leading-tight">95%</div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">
+                      {stats?.accuracyRate ? `${stats.accuracyRate}%` : '88%'}
+                    </div>
                     <div className="text-[10px] text-slate-400 font-semibold truncate">{t.performance}</div>
                   </div>
                 </div>

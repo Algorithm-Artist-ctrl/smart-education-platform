@@ -133,6 +133,73 @@ export default async function TeacherDashboardPage() {
     };
   });
 
+  // Aggregate Class-Level Topic Weaknesses & Pedagogical Interventions (Zero Student Labeling)
+  const topicWeaknessMap = new Map<string, {
+    topicId: string;
+    topicName: string;
+    subjectName: string;
+    strugglingCount: number;
+    totalAttempts: number;
+    totalCorrect: number;
+    misconception: string;
+    intervention: string;
+  }>();
+
+  activeWeakTopics.forEach((wt: any) => {
+    const topicId = wt.topic_id || wt.topic?.id;
+    const topicName = wt.topic?.name || 'Academic Core';
+    const subjectName = wt.topic?.subject?.name || 'General Science & Math';
+    
+    if (!topicId) return;
+
+    if (!topicWeaknessMap.has(topicId)) {
+      let misconception = 'Formulas memorized without underlying geometric intuition.';
+      let intervention = 'Run a 10-minute visual model walkthrough and physical analogy.';
+
+      const nameLower = topicName.toLowerCase();
+      if (nameLower.includes('quadratic') || nameLower.includes('equation')) {
+        misconception = 'Sign confusion in discriminant (b² - 4ac) and factoring negative roots.';
+        intervention = 'Run a 10-minute visual parabola graphing session; highlight vertex-root relationships.';
+      } else if (nameLower.includes('force') || nameLower.includes('motion') || nameLower.includes('newton')) {
+        misconception = 'Equating motion with continuous applied force (Aristotelian friction bias).';
+        intervention = 'Demonstrate zero-friction simulation before introducing F=ma algebraic problem sets.';
+      } else if (nameLower.includes('cell') || nameLower.includes('photosynthesis') || nameLower.includes('biology')) {
+        misconception = 'Conflating cellular respiration with plant photosynthesis mechanisms.';
+        intervention = 'Provide a dual-energy flowchart comparing ATP storage vs photon capture.';
+      } else if (nameLower.includes('chemical') || nameLower.includes('reaction') || nameLower.includes('acid')) {
+        misconception = 'Failure to conserve atomic count when balancing multi-step reaction equations.';
+        intervention = 'Conduct a 5-minute atomic balance counting exercise using color-coded blocks.';
+      }
+
+      topicWeaknessMap.set(topicId, {
+        topicId,
+        topicName,
+        subjectName,
+        strugglingCount: 0,
+        totalAttempts: 0,
+        totalCorrect: 0,
+        misconception,
+        intervention,
+      });
+    }
+
+    const entry = topicWeaknessMap.get(topicId)!;
+    entry.strugglingCount += 1;
+    entry.totalAttempts += (wt.total_attempts || 1);
+    entry.totalCorrect += Math.round(((wt.accuracy_rate || 50) / 100) * (wt.total_attempts || 1));
+  });
+
+  const classTopicGaps = Array.from(topicWeaknessMap.values()).map((t) => {
+    const totalStudents = Math.max(1, students.length);
+    const percentStruggling = Math.min(100, Math.round((t.strugglingCount / totalStudents) * 100));
+    const averageAccuracy = t.totalAttempts > 0 ? Math.round((t.totalCorrect / t.totalAttempts) * 100) : 55;
+    return {
+      ...t,
+      percentStruggling,
+      averageAccuracy,
+    };
+  }).sort((a, b) => b.percentStruggling - a.percentStruggling);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-white selection:bg-indigo-500 selection:text-white relative overflow-x-hidden">
       {/* Background ambient cosmic glow */}
@@ -240,43 +307,66 @@ export default async function TeacherDashboardPage() {
 
         {/* 2-Column: Struggling Students Alert List (Left 6) + Recent Submissions & Assignments (Right 6) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Struggling Students Alert List matching Screen 10 */}
+          {/* Topic-Level Class Weaknesses & Pedagogical Interventions (Zero Student Labeling) */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="cosmic-card p-6 rounded-3xl border border-rose-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
+            <div className="cosmic-card p-6 rounded-3xl border border-indigo-500/30 bg-slate-900/70 backdrop-blur-md shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Struggling Students & Weak Areas</span>
+                  <Brain className="w-4 h-4 text-indigo-400" />
+                  <span>Topic-Level Class Weaknesses</span>
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                  AI Diagnostic
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
+                  Pedagogical Insights
                 </span>
               </div>
 
-              {activeWeakTopics.length === 0 ? (
+              {classTopicGaps.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
-                  <p>No critical learning gaps currently detected across your sections.</p>
+                  <p>No critical conceptual gaps detected across your class sections.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {activeWeakTopics.map((wt) => (
+                <div className="space-y-3.5">
+                  {classTopicGaps.map((gap) => (
                     <div
-                      key={wt.id}
-                      className="p-4 rounded-2xl bg-slate-800/60 border border-white/5 flex items-center justify-between gap-3"
+                      key={gap.topicId}
+                      className="p-4 rounded-2xl bg-slate-800/70 border border-indigo-500/20 space-y-2.5 hover:border-indigo-500/40 transition-all"
                     >
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate">
-                          {wt.student?.full_name || 'Cadet'}
-                        </h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                          Topic: <strong className="text-slate-300">{wt.topic?.name}</strong>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                            {gap.subjectName}
+                          </span>
+                          <h4 className="text-sm font-bold text-white leading-tight">
+                            {gap.topicName}
+                          </h4>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            {gap.percentStruggling}% of Class
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Misconception Notice */}
+                      <div className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-white/5 space-y-1">
+                        <div className="text-[11px] font-semibold text-rose-300 flex items-center gap-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>Identified Misconception:</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 pl-5 leading-relaxed">
+                          {gap.misconception}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          {wt.accuracy_rate}% Acc
-                        </span>
+                      {/* Actionable Pedagogical Intervention */}
+                      <div className="text-xs text-emerald-200 bg-emerald-950/30 p-2.5 rounded-xl border border-emerald-500/20 space-y-1">
+                        <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Recommended Pedagogical Intervention:</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-300/90 pl-5 leading-relaxed">
+                          {gap.intervention}
+                        </p>
                       </div>
                     </div>
                   ))}
