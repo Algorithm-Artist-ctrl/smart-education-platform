@@ -26,26 +26,27 @@ export default async function LearningHubPage() {
     redirect('/login?redirectTo=/student/learning');
   }
 
-  // Fetch all real database data in parallel
+  // 1. Fetch user data and hierarchy in parallel
   const [
     profileRes,
     studentProfileRes,
     aiProfileRes,
     hierarchy,
     learningPosition,
-    personalizedPath,
     weakAreas,
     strengths,
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-    supabase.from('student_ai_profiles').select('*').eq('student_id', user.id).maybeSingle(),
+    supabase.from('profiles').select('id, full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('student_profiles').select('level, ai_partner_name').eq('id', user.id).maybeSingle(),
+    supabase.from('student_ai_profiles').select('ai_partner_name').eq('student_id', user.id).maybeSingle(),
     getCurriculumHierarchy(supabase, user.id),
     getStudentLearningPosition(supabase, user.id),
-    getPersonalizedLearningPath(supabase, user.id),
     getStudentWeakAreasDetailed(supabase, user.id),
     getStudentStrengthsDetailed(supabase, user.id),
   ]);
+
+  // 2. Derive personalized path in memory from already fetched hierarchy (0 extra DB roundtrips)
+  const personalizedPath = await getPersonalizedLearningPath(supabase, user.id, undefined, hierarchy);
 
   const profile = profileRes.data as Profile | null;
   const studentProfile = studentProfileRes.data as StudentProfile | null;

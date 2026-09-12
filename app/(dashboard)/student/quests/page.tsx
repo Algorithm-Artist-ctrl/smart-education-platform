@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/context';
 import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
@@ -24,8 +25,9 @@ import { Profile, StudentProfile, Quest } from '@/types/database.types';
 
 export default function QuestsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const { user, profile: authProfile, studentProfile: authStudentProfile, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(authStudentProfile);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -34,28 +36,29 @@ export default function QuestsPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (authProfile) setProfile(authProfile);
+    if (authStudentProfile) setStudentProfile(authStudentProfile);
+
     async function loadQuests() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const activeUser = user || (await supabase.auth.getUser()).data.user;
+      if (!activeUser && !authLoading) {
         router.push('/login?redirectTo=/student/quests');
         return;
       }
+      if (!activeUser) return;
 
-      const [profRes, studRes, questsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('quests').select('*').order('created_at', { ascending: true }),
-      ]);
+      const { data: questRows } = await supabase
+        .from('quests')
+        .select('id, student_id, title, description, xp_reward, coin_reward, coins_reward, is_completed, is_claimed, status, progress_percent, quest_type, target_id, target_count, current_count')
+        .eq('student_id', activeUser.id)
+        .order('created_at', { ascending: true });
 
-      if (profRes.data) setProfile(profRes.data as Profile);
-      if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
-
-      setQuests((questsRes.data || []) as Quest[]);
+      setQuests((questRows || []) as Quest[]);
       setLoading(false);
     }
 
     loadQuests();
-  }, [router, supabase]);
+  }, [user, authProfile, authStudentProfile, authLoading, router, supabase]);
 
   const handleClaim = async (quest: Quest) => {
     if (!profile || claimingId) return;

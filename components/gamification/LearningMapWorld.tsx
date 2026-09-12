@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Sparkles, Compass, Star, Lock, CheckCircle2, ChevronRight, Layers, Eye } from 'lucide-react';
 import { Subject } from '@/types/database.types';
 
@@ -121,10 +122,13 @@ export default function LearningMapWorld({
         <div className="relative rounded-3xl border border-indigo-500/30 bg-slate-950 p-6 sm:p-10 overflow-hidden min-h-[500px] flex flex-col justify-between shadow-2xl shadow-indigo-950/40">
           {/* 3D Celestial Islands Artwork matching Screen 3 */}
           <div className="absolute inset-0 z-0 opacity-30 mix-blend-screen pointer-events-none">
-            <img
+            <Image
               src="/images/learning_map_worlds.jpg"
               alt="Celestial Worlds"
-              className="w-full h-full object-cover object-center scale-105"
+              fill
+              sizes="(max-width: 1200px) 100vw, 1200px"
+              loading="lazy"
+              className="object-cover object-center scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/20" />
           </div>

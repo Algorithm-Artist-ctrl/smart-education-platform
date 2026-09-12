@@ -8,6 +8,7 @@ import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import SidebarRail from '@/components/design-system/SidebarRail';
 import MobileBottomNav from '@/components/shared/MobileBottomNav';
 import { Subject, Profile, StudentProfile } from '@/types/database.types';
+import { getStaticCurriculum } from '@/lib/learning-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,20 +20,19 @@ export default async function LearningMapPage() {
     redirect('/login?redirectTo=/student/map');
   }
 
-  // Fetch student profile, subjects, topics, completed quizzes, and topic mastery records
-  const [profileRes, studentProfileRes, subjectsRes, topicsRes, attemptsRes, masteryRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).single(),
-    supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-    supabase.from('subjects').select('*').order('created_at', { ascending: true }),
-    supabase.from('topics').select('id, subject_id'),
+  // Fetch static curriculum from memory cache and student-specific records in parallel
+  const [staticCurriculum, profileRes, studentProfileRes, attemptsRes, masteryRes] = await Promise.all([
+    getStaticCurriculum(supabase),
+    supabase.from('profiles').select('id, full_name, role').eq('id', user.id).maybeSingle(),
+    supabase.from('student_profiles').select('level, xp, streak_days, current_streak, coins, total_points').eq('id', user.id).maybeSingle(),
     supabase.from('quiz_attempts').select('topic_id, passed, score_percentage').eq('student_id', user.id),
-    supabase.from('topic_mastery').select('*').eq('student_id', user.id),
+    supabase.from('topic_mastery').select('topic_id, status, mastery_score').eq('student_id', user.id),
   ]);
 
   const profile = profileRes.data as Profile | null;
   const studentProfile = studentProfileRes.data as StudentProfile | null;
-  const subjects = (subjectsRes.data || []) as Subject[];
-  const topics = topicsRes.data || [];
+  const subjects = (staticCurriculum.subjects || []) as Subject[];
+  const topics = staticCurriculum.topics || [];
   const attempts = attemptsRes.data || [];
   const masteries = (masteryRes.data || []) as any[];
 

@@ -12,7 +12,7 @@ import NovaAICompanion from '@/components/gamification/NovaAICompanion';
 import WellbeingCheckIn from '@/components/gamification/WellbeingCheckIn';
 import AIPartnerSetupTrigger from '@/components/gamification/AIPartnerSetupTrigger';
 import { calculateLevel } from '@/lib/gamification-engine';
-import { getNextBestLearningAction, getRecommendedNextStep } from '@/lib/learning-engine';
+import { getNextBestLearningAction, getRecommendedNextStep, getStaticCurriculum } from '@/lib/learning-engine';
 import { translations, Language } from '@/lib/i18n';
 import { 
   Sparkles, 
@@ -46,12 +46,22 @@ export default async function StudentDashboardPage() {
     redirect('/login?redirectTo=/student');
   }
 
-  // 1. Fetch user profile and verify role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
+  // 1. Fetch user profile and student profile in parallel
+  const [profileRes, studentProfileRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('student_profiles')
+      .select('*, class:classes(id, name), section:sections(id, name)')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ]);
+
+  const profile = profileRes.data;
+  const studentProfile = studentProfileRes.data;
 
   const role = profile?.role || (user.user_metadata?.role as string) || 'student';
   if (role !== 'student') {
@@ -60,13 +70,6 @@ export default async function StudentDashboardPage() {
     if (role === 'admin') redirect('/admin');
     if (role === 'super_admin') redirect('/super-admin');
   }
-
-  // 2. Fetch student profile details
-  const { data: studentProfile } = await supabase
-    .from('student_profiles')
-    .select('*, class:classes(*), section:sections(*)')
-    .eq('id', user.id)
-    .maybeSingle();
 
   if (studentProfile && !studentProfile.onboarding_completed) {
     redirect('/onboarding');
@@ -94,30 +97,30 @@ export default async function StudentDashboardPage() {
   // Real calculations via central gamification engine
   const levelInfo = calculateLevel(totalXp);
 
-  // Calculate real rank from database
-  const { count: higherRankCount } = await supabase
-    .from('student_profiles')
-    .select('*', { count: 'exact', head: true })
-    .gt('total_points', totalXp);
+  // Fast rank calculation: Skip database table count when XP is 0
+  let currentRank = 1;
+  let totalStudents = 1;
+  let rankText = currentLang === 'hi' ? 'पर्याप्त डेटा नहीं' : 'Not enough data yet';
 
-  const { count: totalStudentsCount } = await supabase
-    .from('student_profiles')
-    .select('*', { count: 'exact', head: true });
-
-  const currentRank = (higherRankCount || 0) + 1;
-  const totalStudents = Math.max(1, totalStudentsCount || 1);
-  const rankPercentile = Math.max(1, Math.round((currentRank / totalStudents) * 100));
-  const rankText = totalXp === 0
-    ? (currentLang === 'hi' ? 'पर्याप्त डेटा नहीं' : 'Not enough data yet')
-    : totalStudents > 1 && rankPercentile <= 50 
+  if (totalXp > 0) {
+    const [higherRankRes, totalStudentsRes] = await Promise.all([
+      supabase.from('student_profiles').select('*', { count: 'exact', head: true }).gt('total_points', totalXp),
+      supabase.from('student_profiles').select('*', { count: 'exact', head: true }),
+    ]);
+    const higherRankCount = higherRankRes.count || 0;
+    totalStudents = Math.max(1, totalStudentsRes.count || 1);
+    currentRank = higherRankCount + 1;
+    const rankPercentile = Math.max(1, Math.round((currentRank / totalStudents) * 100));
+    rankText = totalStudents > 1 && rankPercentile <= 50 
       ? (currentLang === 'hi' ? `शीर्ष ${rankPercentile}% कक्षा में` : `Top ${rankPercentile}% In Class`) 
       : (currentLang === 'hi' ? `#${currentRank} कक्षा में` : `#${currentRank} In Class`);
+  }
 
-  // 3. Parallel fetch real data: Quests, Subjects, Weak Topics, Study Plans, Assessments, Attempts, Wellbeing, Recommendations, Mastery, Diagnostic
+  // 2. Parallel fetch real data: Quests, Curriculum, Weak Topics, Study Plans, Assessments, Attempts, Wellbeing, Recommendations, Mastery, Diagnostic
   const todayStr = new Date().toISOString().split('T')[0];
   const [
     questsRes, 
-    subjectsRes, 
+    staticCurriculum, 
     weakTopicsRes, 
     studyPlansRes, 
     assessmentsRes, 
@@ -127,28 +130,24 @@ export default async function StudentDashboardPage() {
     nextBestAction,
     masteryRes,
     diagnosticRes,
-    topicsRes,
     aiProfileRes
   ] = await Promise.all([
     supabase
       .from('quests')
-      .select('*')
+      .select('id, title, description, xp_reward, coin_reward, status, is_completed, progress_percent, target_id')
       .eq('student_id', user.id)
       .order('created_at', { ascending: false })
       .limit(3),
-    supabase
-      .from('subjects')
-      .select('*')
-      .order('created_at', { ascending: true }),
+    getStaticCurriculum(supabase),
     supabase
       .from('weak_topics')
-      .select('*, topic:topics(*)')
+      .select('id, accuracy_rate, topic:topics(id, name, subject:subjects(name))')
       .eq('student_id', user.id)
       .eq('status', 'active')
       .limit(2),
     supabase
       .from('study_plans')
-      .select('*, subject:subjects(*), topic:topics(*)')
+      .select('id, title, duration_minutes, status, plan_date, subject:subjects(id, name), topic:topics(id, name)')
       .eq('student_id', user.id)
       .eq('plan_date', todayStr)
       .order('created_at', { ascending: true })
@@ -182,25 +181,22 @@ export default async function StudentDashboardPage() {
       .limit(1)
       .maybeSingle(),
     supabase
-      .from('topics')
-      .select('id, subject_id'),
-    supabase
       .from('student_ai_profiles')
-      .select('*')
+      .select('ai_partner_name, preferred_language, conversation_style, setup_completed')
       .eq('student_id', user.id)
       .maybeSingle(),
   ]);
 
   const quests: Quest[] = questsRes.data || [];
-  const subjects: Subject[] = subjectsRes.data || [];
-  const weakTopics: WeakTopic[] = weakTopicsRes.data || [];
-  const todayPlans: StudyPlan[] = studyPlansRes.data || [];
+  const subjects: Subject[] = (staticCurriculum.subjects || []) as Subject[];
+  const weakTopics = (weakTopicsRes.data || []) as unknown as WeakTopic[];
+  const todayPlans = (studyPlansRes.data || []) as unknown as StudyPlan[];
   const defaultAssessments = assessmentsRes.data || [];
   const userAttempts = attemptsRes.data || [];
   const initialFeeling = wellbeingRes.data?.feeling || null;
   const topicMasteries = masteryRes.data || [];
   const diagnosticData = diagnosticRes.data || null;
-  const allTopics = topicsRes.data || [];
+  const allTopics = staticCurriculum.topics || [];
   const baselineScores = (diagnosticData?.subject_scores as Record<string, number>) || {};
   const aiProfile = aiProfileRes.data || null;
   const partnerName = aiProfile?.ai_partner_name || studentProfile?.ai_partner_name || 'Nova';

@@ -84,15 +84,22 @@ export default function NovaAICompanion({
   const recognitionRef = useRef<any>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Sync partnerName prop
+  // Hydrate partner name from props or sessionStorage cache to avoid network calls during navigation
   useEffect(() => {
     if (partnerName && partnerName !== 'Nova') {
       setCurrentPartnerName(partnerName);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('smartedu_ai_partner', partnerName);
+      }
+      return;
     }
-  }, [partnerName]);
-
-  // Fetch student's custom AI profile on mount to hydrate partner name
-  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = sessionStorage.getItem('smartedu_ai_partner');
+      if (cached) {
+        setCurrentPartnerName(cached);
+        return;
+      }
+    }
     let isMounted = true;
     async function loadAIProfile() {
       try {
@@ -100,28 +107,36 @@ export default function NovaAICompanion({
         const data = await res.json();
         if (isMounted && data.success && data.profile?.ai_partner_name) {
           setCurrentPartnerName(data.profile.ai_partner_name);
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('smartedu_ai_partner', data.profile.ai_partner_name);
+          }
         }
-      } catch (err) {
+      } catch {
         // Fallback silently to prop or 'Nova'
       }
     }
     loadAIProfile();
     return () => { isMounted = false; };
-  }, []);
+  }, [partnerName]);
 
   // Listen for global updates (e.g. when user changes partner name in settings or setup modal)
   useEffect(() => {
     const handlePartnerUpdated = (e: any) => {
       if (e.detail?.partnerName) {
         setCurrentPartnerName(e.detail.partnerName);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('smartedu_ai_partner', e.detail.partnerName);
+        }
       }
     };
     window.addEventListener('ai-partner-updated', handlePartnerUpdated);
     return () => window.removeEventListener('ai-partner-updated', handlePartnerUpdated);
   }, []);
 
-  // Check server-side health of Nova AI (Gemini client & key verification)
+  // Check server-side health of Nova AI ONLY when opened or explicitly interacted with
   useEffect(() => {
+    if (!isOpen) return; // Gemini must never run or block during normal page navigation
+
     let isMounted = true;
     async function checkHealth() {
       try {
@@ -168,7 +183,7 @@ export default function NovaAICompanion({
     }
     checkHealth();
     return () => { isMounted = false; };
-  }, []);
+  }, [isOpen]);
 
   // Dynamically resolve active topic from weak topic, subject, or recent conversation
   const resolvedTopic = weakTopicName || (recommendedSubject ? `${recommendedSubject} concepts` : 'Core Concepts');

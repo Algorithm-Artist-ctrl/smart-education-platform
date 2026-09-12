@@ -4,6 +4,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/context';
 import { WeakTopic, LearningContent, Assessment, Profile, StudentProfile } from '@/types/database.types';
 import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
@@ -34,8 +35,9 @@ function RevisionContent() {
   const searchParams = useSearchParams();
   const topicFilter = searchParams.get('topic');
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const { user, profile: authProfile, studentProfile: authStudentProfile, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(authStudentProfile);
   const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<WeakTopic | null>(null);
   const [contentList, setContentList] = useState<LearningContent[]>([]);
@@ -76,31 +78,24 @@ function RevisionContent() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (authProfile) setProfile(authProfile);
+    if (authStudentProfile) setStudentProfile(authStudentProfile);
+
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const activeUser = user || (await supabase.auth.getUser()).data.user;
+      if (!activeUser && !authLoading) {
         router.push('/login?redirectTo=/student/revision');
         return;
       }
+      if (!activeUser) return;
 
-      const [profRes, studRes, wtRes, topicsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-        supabase
-          .from('weak_topics')
-          .select('*, topic:topics(*, subject:subjects(*))')
-          .eq('student_id', user.id)
-          .order('accuracy_rate', { ascending: true }),
-        supabase
-          .from('topics')
-          .select('*, subject:subjects(*)')
-          .limit(3),
-      ]);
+      const { data: wtData } = await supabase
+        .from('weak_topics')
+        .select('id, student_id, topic_id, accuracy_rate, status, topic:topics(id, name, subject:subjects(id, name))')
+        .eq('student_id', activeUser.id)
+        .order('accuracy_rate', { ascending: true });
 
-      if (profRes.data) setProfile(profRes.data as Profile);
-      if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
-
-      const activeList: any[] = wtRes.data || [];
+      const activeList: any[] = wtData || [];
 
       setWeakTopics(activeList as WeakTopic[]);
       const current = topicFilter
@@ -111,7 +106,7 @@ function RevisionContent() {
     }
 
     loadData();
-  }, [topicFilter, router, supabase]);
+  }, [topicFilter, user, authProfile, authStudentProfile, authLoading, router, supabase]);
 
   // Load content & assessments for selected topic
   useEffect(() => {

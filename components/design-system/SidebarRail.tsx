@@ -25,16 +25,16 @@ export function SidebarRail({ className = '' }: { className?: string }) {
   const { t } = useI18n();
 
   const navItems = [
-    { href: '/student', label: t.navHome || 'Home', icon: <Home className="w-5 h-5" /> },
-    { href: '/student/insights', label: t.navInsights || 'AI Insights', icon: <Sparkles className="w-5 h-5" /> },
-    { href: '/student/map', label: t.navLearningMap || 'Learning Map', icon: <Map className="w-5 h-5" /> },
-    { href: '/student/creativity', label: t.navCreativity || 'Creativity Lab', icon: <Palette className="w-5 h-5" /> },
-    { href: '/student/missions', label: t.navMissions || 'Life Missions', icon: <Globe className="w-5 h-5" /> },
-    { href: '/student/portfolio', label: t.navPortfolio || 'Portfolio', icon: <Layers className="w-5 h-5" /> },
-    { href: '/student/quests', label: t.navQuests || 'Quests', icon: <Target className="w-5 h-5" /> },
-    { href: '/student/learning', label: t.navMyLearning || 'My Learning', icon: <BookOpen className="w-5 h-5" /> },
-    { href: '/student/revision', label: t.navRevision || 'Revision', icon: <RefreshCw className="w-5 h-5" /> },
-    { href: '/student/career', label: t.navCareer || 'Career', icon: <Compass className="w-5 h-5" /> },
+    { href: '/student', label: t.navHome || 'Home', icon: <Home className="w-5 h-5" />, prefetch: true },
+    { href: '/student/insights', label: t.navInsights || 'AI Insights', icon: <Sparkles className="w-5 h-5" />, prefetch: false },
+    { href: '/student/map', label: t.navLearningMap || 'Learning Map', icon: <Map className="w-5 h-5" />, prefetch: true },
+    { href: '/student/creativity', label: t.navCreativity || 'Creativity Lab', icon: <Palette className="w-5 h-5" />, prefetch: false },
+    { href: '/student/missions', label: t.navMissions || 'Life Missions', icon: <Globe className="w-5 h-5" />, prefetch: false },
+    { href: '/student/portfolio', label: t.navPortfolio || 'Portfolio', icon: <Layers className="w-5 h-5" />, prefetch: false },
+    { href: '/student/quests', label: t.navQuests || 'Quests', icon: <Target className="w-5 h-5" />, prefetch: false },
+    { href: '/student/learning', label: t.navMyLearning || 'My Learning', icon: <BookOpen className="w-5 h-5" />, prefetch: true },
+    { href: '/student/revision', label: t.navRevision || 'Revision', icon: <RefreshCw className="w-5 h-5" />, prefetch: false },
+    { href: '/student/career', label: t.navCareer || 'Career', icon: <Compass className="w-5 h-5" />, prefetch: false },
   ];
 
   return (
@@ -47,8 +47,9 @@ export function SidebarRail({ className = '' }: { className?: string }) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={item.prefetch}
             title={item.label}
-            className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 group ${
+            className={`relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 active:scale-95 group ${
               isActive
                 ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/30'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'

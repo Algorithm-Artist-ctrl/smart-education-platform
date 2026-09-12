@@ -2,9 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CareerProfile, QuizAttempt, Profile, StudentProfile } from '@/types/database.types';
+import { useAuth } from '@/lib/auth/context';
+import { CareerProfile, Profile, StudentProfile } from '@/types/database.types';
 import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
 import NovaAICompanion from '@/components/gamification/NovaAICompanion';
@@ -32,10 +34,10 @@ import MobileBottomNav from '@/components/shared/MobileBottomNav';
 
 export default function CareerGuidancePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const { user, profile: authProfile, studentProfile: authStudentProfile, loading: authLoading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(authStudentProfile);
   const [careerProfile, setCareerProfile] = useState<CareerProfile | null>(null);
-  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,41 +103,37 @@ export default function CareerGuidancePage() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (authProfile) setProfile(authProfile);
+    if (authStudentProfile) setStudentProfile(authStudentProfile);
+
     async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const activeUser = user || (await supabase.auth.getUser()).data.user;
+      if (!activeUser && !authLoading) {
         router.push('/login?redirectTo=/student/career');
         return;
       }
+      if (!activeUser) return;
 
-      const [profRes, studRes, careerRes, attemptRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('career_profiles').select('*').eq('student_id', user.id).maybeSingle(),
-        supabase.from('quiz_attempts').select('*, assessment:assessments(*)').eq('student_id', user.id),
-      ]);
+      const { data: careerData } = await supabase
+        .from('career_profiles')
+        .select('*')
+        .eq('student_id', activeUser.id)
+        .maybeSingle();
 
-      if (profRes.data) setProfile(profRes.data as Profile);
-      if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
-
-      if (careerRes.data) {
-        setCareerProfile(careerRes.data as CareerProfile);
-        setInterests(careerRes.data.interests || ['Software Engineering & Web Apps', 'AI & Machine Learning Research']);
-        setSkills(careerRes.data.skills || ['Python Programming', 'Mathematical Problem Solving']);
+      if (careerData) {
+        setCareerProfile(careerData as CareerProfile);
+        setInterests(careerData.interests || ['Software Engineering & Web Apps', 'AI & Machine Learning Research']);
+        setSkills(careerData.skills || ['Python Programming', 'Mathematical Problem Solving']);
       } else {
-        // Defaults
         setInterests(['Software Engineering & Web Apps', 'AI & Machine Learning Research']);
         setSkills(['Python Programming', 'Mathematical Problem Solving', 'Logical & Algorithmic Reasoning']);
       }
 
-      if (attemptRes.data) {
-        setAttempts(attemptRes.data as QuizAttempt[]);
-      }
       setLoading(false);
     }
 
     loadData();
-  }, [router, supabase]);
+  }, [user, authProfile, authStudentProfile, authLoading, router, supabase]);
 
   const toggleInterest = (item: string) => {
     setInterests((prev) =>
@@ -414,10 +412,13 @@ export default function CareerGuidancePage() {
 
           {/* 3D Visual Artwork Banner matching Screen 9 */}
           <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl h-64 sm:h-80 flex flex-col justify-end p-6 sm:p-8 group mt-6">
-            <img
+            <Image
               src="/images/hero_student.jpg"
               alt="Future Career Galaxy"
-              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+              fill
+              sizes="(max-width: 1200px) 100vw, 1200px"
+              loading="lazy"
+              className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent" />
             

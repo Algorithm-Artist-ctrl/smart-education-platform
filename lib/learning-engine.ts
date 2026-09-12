@@ -1352,85 +1352,101 @@ export async function processAssessmentEvaluation(
   };
 }
 
+interface StaticCurriculumCache {
+  timestamp: number;
+  subjects: Subject[];
+  modules: Module[];
+  chapters: Chapter[];
+  topics: Topic[];
+}
+
+let staticCurriculumCache: StaticCurriculumCache | null = null;
+const STATIC_CURRICULUM_TTL = 10 * 60 * 1000; // 10 minutes cache
+
+/**
+ * Fetch static curriculum structure with 10-minute in-memory caching.
+ * Prevents redundant database hits across page navigations.
+ */
+export async function getStaticCurriculum(supabase: SupabaseClient): Promise<StaticCurriculumCache> {
+  const now = Date.now();
+  if (staticCurriculumCache && (now - staticCurriculumCache.timestamp) < STATIC_CURRICULUM_TTL) {
+    return staticCurriculumCache;
+  }
+
+  const [subjectsRes, modulesRes, chaptersRes, topicsRes] = await Promise.all([
+    supabase.from('subjects').select('*').order('name', { ascending: true }),
+    supabase.from('modules').select('*').order('order_index', { ascending: true }),
+    supabase.from('chapters').select('*').order('order_index', { ascending: true }),
+    supabase.from('topics').select('*').order('order_index', { ascending: true }),
+  ]);
+
+  staticCurriculumCache = {
+    timestamp: now,
+    subjects: subjectsRes.data || [],
+    modules: modulesRes.data || [],
+    chapters: chaptersRes.data || [],
+    topics: topicsRes.data || [],
+  };
+
+  return staticCurriculumCache;
+}
+
+/**
+ * Invalidate static curriculum cache after syllabus mutations.
+ */
+export function invalidateCurriculumCache(): void {
+  staticCurriculumCache = null;
+}
+
 /**
  * Get Complete Structured Curriculum Hierarchy
- * Returns Subject -> Module -> Chapter -> Topic tree with real student mastery & progress
+ * Uses cached static curriculum and fetches real student mastery in parallel
  */
 export async function getCurriculumHierarchy(
   supabase: SupabaseClient,
   studentId?: string,
   subjectId?: string
 ): Promise<SubjectCurriculumHierarchy[]> {
-  // 1. Fetch Subjects
-  let subjectQuery = supabase
-    .from('subjects')
-    .select('*')
-    .order('name', { ascending: true });
+  const staticData = await getStaticCurriculum(supabase);
 
+  let subjects = staticData.subjects;
   if (subjectId) {
-    subjectQuery = subjectQuery.eq('id', subjectId);
+    subjects = subjects.filter((s) => s.id === subjectId);
   }
-
-  const { data: subjects, error: subErr } = await subjectQuery;
-  if (subErr || !subjects || subjects.length === 0) {
+  if (subjects.length === 0) {
     return [];
   }
 
-  const subjectIds = subjects.map((s) => s.id);
+  const subjectIds = new Set(subjects.map((s) => s.id));
+  const modules = staticData.modules.filter((m) => subjectIds.has(m.subject_id));
+  const moduleIds = new Set(modules.map((m) => m.id));
+  const chapters = staticData.chapters.filter((c) => moduleIds.has(c.module_id));
+  const topics = staticData.topics.filter((t) => subjectIds.has(t.subject_id));
 
-  // 2. Fetch Modules
-  const { data: modulesData } = await supabase
-    .from('modules')
-    .select('*')
-    .in('subject_id', subjectIds)
-    .order('order_index', { ascending: true });
-
-  const modules = modulesData || [];
-  const moduleIds = modules.map((m) => m.id);
-
-  // 3. Fetch Chapters
-  let chapters: Chapter[] = [];
-  if (moduleIds.length > 0) {
-    const { data: chaptersData } = await supabase
-      .from('chapters')
-      .select('*')
-      .in('module_id', moduleIds)
-      .order('order_index', { ascending: true });
-    chapters = chaptersData || [];
-  }
-
-  // 4. Fetch Topics
-  const { data: topicsData } = await supabase
-    .from('topics')
-    .select('*')
-    .in('subject_id', subjectIds)
-    .order('order_index', { ascending: true });
-
-  const topics: Topic[] = topicsData || [];
-
-  // 5. If studentId provided, fetch student mastery & learning positions
+  // If studentId provided, fetch student mastery & learning positions in parallel
   let topicMasteryMap: Record<string, TopicMastery> = {};
   let learningPositionsMap: Record<string, StudentLearningPosition> = {};
 
   if (studentId) {
-    const { data: masteryRows } = await supabase
-      .from('topic_mastery')
-      .select('*')
-      .eq('student_id', studentId);
+    const [masteryRes, positionsRes] = await Promise.all([
+      supabase
+        .from('topic_mastery')
+        .select('*')
+        .eq('student_id', studentId),
+      supabase
+        .from('student_learning_positions')
+        .select('*')
+        .eq('student_id', studentId),
+    ]);
 
-    if (masteryRows) {
-      masteryRows.forEach((row) => {
+    if (masteryRes.data) {
+      masteryRes.data.forEach((row) => {
         topicMasteryMap[row.topic_id] = row;
       });
     }
 
-    const { data: positions } = await supabase
-      .from('student_learning_positions')
-      .select('*')
-      .eq('student_id', studentId);
-
-    if (positions) {
-      positions.forEach((pos) => {
+    if (positionsRes.data) {
+      positionsRes.data.forEach((pos) => {
         if (pos.topic_id) {
           learningPositionsMap[pos.topic_id] = pos;
         }
@@ -1892,10 +1908,11 @@ export async function getStudentStrengthsDetailed(
 export async function getPersonalizedLearningPath(
   supabase: SupabaseClient,
   studentId: string,
-  subjectId?: string
+  subjectId?: string,
+  preloadedHierarchy?: SubjectCurriculumHierarchy[]
 ): Promise<PersonalizedPathStep[]> {
-  // Fetch curriculum hierarchy to discover logical progression
-  const hierarchy = await getCurriculumHierarchy(supabase, studentId, subjectId);
+  // Use preloaded hierarchy if already available to avoid duplicate database traversal
+  const hierarchy = preloadedHierarchy || (await getCurriculumHierarchy(supabase, studentId, subjectId));
   if (hierarchy.length === 0) {
     return [];
   }

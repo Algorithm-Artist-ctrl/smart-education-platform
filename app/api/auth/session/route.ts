@@ -75,7 +75,7 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: true,
       user: {
         id: user.id,
@@ -86,6 +86,11 @@ export async function GET() {
       role,
       onboardingCompleted,
     });
+
+    response.cookies.set('smartedu_role', role, { path: '/', maxAge: 60 * 60 * 24 * 7 });
+    response.cookies.set('smartedu_onboarded', onboardingCompleted ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 7 });
+
+    return response;
   } catch (err: any) {
     console.error('Session API error:', err);
     return NextResponse.json(

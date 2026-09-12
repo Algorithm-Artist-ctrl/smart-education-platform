@@ -41,11 +41,6 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
-        try {
-          await refreshProfile();
-        } catch {
-          // Cookie is set, continue
-        }
         const destination = redirectTo || data.redirectTo || '/student';
         window.location.href = destination;
         return;

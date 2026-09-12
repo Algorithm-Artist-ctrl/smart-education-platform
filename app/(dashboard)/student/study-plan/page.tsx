@@ -4,8 +4,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/context';
 import { StudyPlan, Subject, Topic, Profile, StudentProfile } from '@/types/database.types';
+import { getStaticCurriculum } from '@/lib/learning-engine';
 import { enqueueAction } from '@/lib/offline/db';
 import Navbar from '@/components/shared/Navbar';
 import GamificationBar from '@/components/gamification/GamificationBar';
@@ -19,26 +22,27 @@ import {
   Clock, 
   AlertCircle, 
   Loader2, 
-  Sparkles,
-  Trash2,
-  Check,
-  Zap,
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
+  Sparkles, 
+  Trash2, 
+  Check, 
+  Zap, 
+  BookOpen, 
+  ChevronLeft, 
+  ChevronRight, 
+  Flame, 
 } from 'lucide-react';
 import SidebarRail from '@/components/design-system/SidebarRail';
 import MobileBottomNav from '@/components/shared/MobileBottomNav';
 
 export default function StudyPlanPage() {
   const router = useRouter();
+  const { user, profile: authProfile, studentProfile: authStudentProfile, loading: authLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(authStudentProfile);
   const [plans, setPlans] = useState<StudyPlan[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -64,33 +68,45 @@ export default function StudyPlanPage() {
     setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1));
   };
 
+  // 1. Initial mount: Hydrate auth and fetch static subjects/topics once
   useEffect(() => {
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+    if (authProfile) setProfile(authProfile);
+    if (authStudentProfile) setStudentProfile(authStudentProfile);
+
+    async function loadStaticData() {
+      const activeUser = user || (await supabase.auth.getUser()).data.user;
+      if (!activeUser && !authLoading) {
         router.push('/login?redirectTo=/student/study-plan');
         return;
       }
-      setUserId(user.id);
+      if (!activeUser) return;
+      setUserId(activeUser.id);
 
-      const [profRes, studRes, subRes, topRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('student_profiles').select('*').eq('id', user.id).single(),
-        supabase.from('subjects').select('*'),
-        supabase.from('topics').select('*'),
-      ]);
+      const curr = await getStaticCurriculum(supabase);
 
-      if (profRes.data) setProfile(profRes.data as Profile);
-      if (studRes.data) setStudentProfile(studRes.data as StudentProfile);
-      if (subRes.data) setSubjects(subRes.data);
-      if (topRes.data) setTopics(topRes.data);
-      if (subRes.data && subRes.data.length > 0) setSubjectId(subRes.data[0].id);
+      if (curr.subjects) {
+        setSubjects(curr.subjects);
+        if (curr.subjects.length > 0) setSubjectId(curr.subjects[0].id);
+      }
+      if (curr.topics) {
+        setTopics(curr.topics);
+      }
+    }
 
-      // Load tasks for date
+    loadStaticData();
+  }, [user, authProfile, authStudentProfile, authLoading, router, supabase]);
+
+  // 2. Fetch study plans only when selectedDate or userId changes
+  useEffect(() => {
+    if (!userId && !user?.id) return;
+    const activeUid = userId || user?.id;
+
+    async function loadDatePlans() {
+      setLoading(true);
       const { data: planData } = await supabase
         .from('study_plans')
-        .select('*, subject:subjects(*), topic:topics(*)')
-        .eq('student_id', user.id)
+        .select('*, subject:subjects(id, name), topic:topics(id, name)')
+        .eq('student_id', activeUid)
         .eq('plan_date', selectedDate)
         .order('created_at', { ascending: true });
 
@@ -98,8 +114,8 @@ export default function StudyPlanPage() {
       setLoading(false);
     }
 
-    loadData();
-  }, [selectedDate, router, supabase]);
+    loadDatePlans();
+  }, [selectedDate, userId, user, supabase]);
 
   const toggleTaskComplete = async (plan: StudyPlan) => {
     const newStatus = plan.status === 'completed' ? 'pending' : 'completed';
@@ -478,9 +494,12 @@ export default function StudyPlanPage() {
             {/* 3D Nova Robot Motivation Quote Card matching Screen 7 */}
             <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/30 shadow-xl flex items-center gap-5">
               <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-cyan-400/40 shrink-0 bg-slate-950 shadow-lg shadow-cyan-500/20">
-                <img
+                <Image
                   src="/images/nova_robot.jpg"
                   alt="Nova Robot Mascot"
+                  width={80}
+                  height={80}
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
               </div>

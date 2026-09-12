@@ -58,12 +58,12 @@ export default function Navbar({ profile }: NavbarProps) {
   };
 
   const navLinks = [
-    { href: '/student', label: t.navHome || 'Home' },
-    { href: '/student/map', label: t.navLearningMap || 'Learning Map' },
-    { href: '/student/quests', label: t.navQuests || 'Quests' },
-    { href: '/student/subjects', label: t.navSubjects || 'Subjects' },
-    { href: '/student/revision', label: t.navRevision || 'Revision' },
-    { href: '/student/career', label: t.navCareer || 'Career' },
+    { href: '/student', label: t.navHome || 'Home', prefetch: true },
+    { href: '/student/map', label: t.navLearningMap || 'Learning Map', prefetch: true },
+    { href: '/student/quests', label: t.navQuests || 'Quests', prefetch: false },
+    { href: '/student/learning', label: t.navSubjects || 'Subjects', prefetch: true },
+    { href: '/student/revision', label: t.navRevision || 'Revision', prefetch: false },
+    { href: '/student/career', label: t.navCareer || 'Career', prefetch: false },
   ];
 
   return (
@@ -116,7 +116,8 @@ export default function Navbar({ profile }: NavbarProps) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`px-3 py-2 rounded-xl transition-all min-h-[40px] flex items-center gap-1.5 ${
+                    prefetch={link.prefetch}
+                    className={`px-3 py-2 rounded-xl transition-all active:scale-95 min-h-[40px] flex items-center gap-1.5 ${
                       isActive
                         ? 'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-white border border-indigo-500/30 shadow-sm shadow-indigo-500/20'
                         : 'hover:bg-white/5 hover:text-white'

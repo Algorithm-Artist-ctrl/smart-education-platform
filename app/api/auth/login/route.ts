@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: data.user.id,
@@ -109,6 +109,11 @@ export async function POST(request: NextRequest) {
       role,
       redirectTo,
     });
+
+    response.cookies.set('smartedu_role', role, { path: '/', maxAge: 60 * 60 * 24 * 7 });
+    response.cookies.set('smartedu_onboarded', redirectTo === '/student' ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 7 });
+
+    return response;
   } catch (err: any) {
     console.error('Server login error:', err);
     return NextResponse.json(

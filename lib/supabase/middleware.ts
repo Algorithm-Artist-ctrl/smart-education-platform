@@ -75,18 +75,26 @@ export async function updateSession(request: NextRequest) {
 
   // 2. Authenticated user access control
   if (user) {
-    // Determine role from profiles table (source of truth), with fallback to metadata
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
+    const cachedRole = request.cookies.get('smartedu_role')?.value;
+    const cachedOnboarded = request.cookies.get('smartedu_onboarded')?.value;
 
-    const role = (profile?.role as string) || (user.user_metadata?.role as string) || 'student';
+    let role = cachedRole || (user.user_metadata?.role as string) || '';
+    let onboardingCompleted = cachedOnboarded !== undefined ? cachedOnboarded === 'true' : (role !== 'student');
 
-    // Check student onboarding status if applicable
-    let onboardingCompleted = true;
-    if (role === 'student') {
+    // Only query database if role cookie is missing
+    if (!role) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      role = (profile?.role as string) || (user.user_metadata?.role as string) || 'student';
+      supabaseResponse.cookies.set('smartedu_role', role, { path: '/', maxAge: 60 * 60 * 24 * 7 });
+    }
+
+    // Only query student onboarding if student and onboarding cookie is missing
+    if (role === 'student' && cachedOnboarded === undefined) {
       const { data: studentProf } = await supabase
         .from('student_profiles')
         .select('onboarding_completed')
@@ -94,6 +102,7 @@ export async function updateSession(request: NextRequest) {
         .maybeSingle();
 
       onboardingCompleted = Boolean(studentProf?.onboarding_completed);
+      supabaseResponse.cookies.set('smartedu_onboarded', onboardingCompleted ? 'true' : 'false', { path: '/', maxAge: 60 * 60 * 24 * 7 });
     }
 
     // Determine target dashboard based on role and onboarding status
